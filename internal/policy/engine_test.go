@@ -667,3 +667,98 @@ func BenchmarkLoad50Rules(b *testing.B) {
 		te.load(b)
 	}
 }
+
+func TestEmptyPolicyFileKeepsRules(t *testing.T) {
+	te := newTestEnv(t)
+	good := "version: 1\nrules:\n  - {name: no-push, match: {command: \"git push*\"}, action: deny}\n"
+	writeFile(t, te.userFile(), good)
+	e, _ := te.load(t)
+
+	// Truncated (an editor mid-save, or someone emptying the file): the
+	// deny rule must survive and the status must say why.
+	writeFile(t, te.userFile(), "")
+	st := e.Reload()
+	if r := e.Evaluate(shell("git push")); r.Action != api.BehaviorDeny {
+		t.Fatalf("empty file dropped the rules: %+v", r)
+	}
+	if st.Files[1].Rules != 1 || !strings.Contains(st.Files[1].Error, "policy file is empty") ||
+		len(st.Errors) != 2 || !strings.Contains(st.Errors[1], "last valid version") {
+		t.Fatalf("status = %+v", st)
+	}
+
+	// The documented way to clear rules works.
+	writeFile(t, te.userFile(), "version: 1\nrules: []\n")
+	st = e.Reload()
+	if r := e.Evaluate(shell("git push")); r.Action != "" || len(st.Errors) != 0 || st.Files[1].Rules != 0 {
+		t.Fatalf("explicit empty rules: %+v / %+v", r, st)
+	}
+
+	// Deleting the file also clears them, without an error.
+	writeFile(t, te.userFile(), good)
+	e.Reload()
+	os.Remove(te.userFile())
+	if st := e.Reload(); len(st.Errors) != 0 || e.Evaluate(shell("git push")).Action != "" {
+		t.Fatalf("deleted file: %+v", st)
+	}
+}
+
+func TestEmptyPolicyFileAtFirstLoad(t *testing.T) {
+	te := newTestEnv(t)
+	writeFile(t, te.userFile(), "")
+	_, st := te.load(t)
+	if len(st.Errors) != 1 || !strings.Contains(st.Errors[0], "policy file is empty") || st.Rules != 1 {
+		t.Fatalf("status = %+v", st)
+	}
+	// An empty repo policy is reported the same way.
+	writeFile(t, te.repoFile(), "")
+	e, _ := te.load(t)
+	in := shell("ls")
+	in.Repo = te.repo
+	e.Evaluate(in)
+	found := false
+	for _, f := range e.Status().Files {
+		if f.Scope == ScopeRepo && strings.Contains(f.Error, "policy file is empty") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("repo status = %+v", e.Status().Files)
+	}
+}
+
+func TestMidWriteIsRetried(t *testing.T) {
+	te := newTestEnv(t)
+	good := "version: 1\nrules:\n  - {name: no-push, match: {command: \"git push*\"}, action: deny}\n"
+	writeFile(t, te.userFile(), good)
+	e, _ := te.load(t)
+	clk := withClock(e)
+
+	// A writer finishes while we read: the read returns the half-written
+	// content (valid YAML, no rules), then the file changes under us.
+	writes := 0
+	readFile = func(name string) ([]byte, error) {
+		data, err := os.ReadFile(name)
+		if writes == 0 && name == te.userFile() {
+			writes++
+			writeFile(t, name, good+"  - {name: no-pull, match: {command: \"git pull*\"}, action: deny}\n")
+		}
+		return data, err
+	}
+	t.Cleanup(func() { readFile = os.ReadFile })
+
+	writeFile(t, te.userFile(), "version: 1\n") // the "truncated" first half
+	clk.advance(3 * time.Second)
+	if r := e.Evaluate(shell("git push")); r.Action != api.BehaviorDeny {
+		t.Fatalf("mid-write read must keep the previous rules: %+v", r)
+	}
+	if len(e.Status().Errors) != 0 {
+		t.Fatalf("a mid-write read is not an error: %v", e.Status().Errors)
+	}
+	// No clock advance: the next call retries at once and sees the final file.
+	if r := e.Evaluate(shell("git pull")); r.Action != api.BehaviorDeny {
+		t.Fatalf("retry should load the finished file: %+v", r)
+	}
+	if r := e.Evaluate(shell("git push")); r.Action != api.BehaviorDeny {
+		t.Fatalf("finished file: %+v", r)
+	}
+}

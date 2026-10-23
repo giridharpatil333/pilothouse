@@ -326,6 +326,14 @@ dynamically, other users' homes, and anything outside the tool call itself.
   typo never silently drops your deny rules. If it never compiled, none of
   its rules apply. Either way the error (with line numbers) is shown by
   `pilothouse policy status` and `pilothouse policy check`.
+- **An empty (0-byte) file is an error too**, not "no rules": editors that
+  save in place truncate the file before writing it, and reading it in that
+  moment must not drop your deny rules. The previous rules stay in force.
+  To clear a file's rules on purpose, write `version: 1` and `rules: []`, or
+  delete the file.
+- A file that changes while it is being read (size or modification time
+  moves, or fewer bytes arrive than expected) is treated as mid-write: the
+  previous rules stay and it is read again on the next tool call.
 - Deleting a file removes its rules.
 - The built-in rule works even if every file is broken.
 

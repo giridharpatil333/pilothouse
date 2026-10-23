@@ -166,7 +166,7 @@ func Load(opts Options) (*Engine, api.PolicyStatus) {
 		action:      api.BehaviorAsk,
 		check:       selfProtection,
 	}}
-	e.user = newSlot(opts.UserFile, e.compileFile)
+	e.user = newPolicySlot(opts.UserFile, e.compileFile)
 	e.trust = newSlot(opts.TrustedReposFile, parseTrustSet)
 	return e, e.Reload()
 }
@@ -613,7 +613,7 @@ func (e *Engine) repoState(root string, nanos int64) *repoState {
 				canon = r
 			}
 			rs = &repoState{root: root, canon: canon,
-				file: newSlot(filepath.Join(root, RepoPolicyFile), e.compileFile)}
+				file: newPolicySlot(filepath.Join(root, RepoPolicyFile), e.compileFile)}
 			e.repos[root] = rs
 		}
 		e.reposMu.Unlock()
@@ -655,15 +655,30 @@ type snapshot[T any] struct {
 // current snapshot while one goroutine re-stats (and, if changed,
 // recompiles) the file.
 type slot[T any] struct {
-	path    string
-	parse   func(path string, data []byte) (T, error)
-	checked atomic.Int64 // wall-clock nanos of the last stat
-	mu      sync.Mutex   // serialises refreshes
-	cur     atomic.Pointer[snapshot[T]]
+	path string
+	// emptyErr, if set, makes a 0-byte file an error instead of "no
+	// content" (policy files: see refresh).
+	emptyErr string
+	parse    func(path string, data []byte) (T, error)
+	checked  atomic.Int64 // wall-clock nanos of the last stat
+	mu       sync.Mutex   // serialises refreshes
+	cur      atomic.Pointer[snapshot[T]]
 }
 
 func newSlot[T any](path string, parse func(string, []byte) (T, error)) *slot[T] {
 	return &slot[T]{path: path, parse: parse}
+}
+
+// readFile is os.ReadFile; tests swap it to simulate a concurrent writer.
+var readFile = os.ReadFile
+
+// emptyPolicyMsg explains why an empty policy file is not "no rules".
+const emptyPolicyMsg = "policy file is empty — keeping the previous rules (write `version: 1` + `rules: []` to clear them, or delete the file)"
+
+func newPolicySlot(path string, parse func(string, []byte) ([]*rule, error)) *slot[[]*rule] {
+	s := newSlot(path, parse)
+	s.emptyErr = emptyPolicyMsg
+	return s
 }
 
 func (s *slot[T]) get(now int64, force bool) *snapshot[T] {
@@ -684,45 +699,69 @@ func (s *slot[T]) get(now int64, force bool) *snapshot[T] {
 	if cur := s.cur.Load(); !force && cur != nil && fresh() {
 		return cur
 	}
-	next := s.refresh(s.cur.Load())
+	next, settled := s.refresh(s.cur.Load())
 	s.cur.Store(next)
-	s.checked.Store(now)
+	if settled {
+		s.checked.Store(now)
+	} // else: caught mid-write; the next call checks again straight away
 	return next
 }
 
-func (s *slot[T]) refresh(prev *snapshot[T]) *snapshot[T] {
+// refresh re-reads the file if its stamp changed. settled is false when
+// the file was caught being written; the returned snapshot then keeps the
+// previous rules and a zero stamp, so the next check reads it again.
+//
+// Why: editors and os.WriteFile truncate and then write. A read in that
+// window sees an empty or partial file, and an empty policy is valid YAML
+// with no rules — every deny rule would silently vanish until the next
+// change. So an empty file is an error (keep the last good rules), and a
+// file whose size or mtime moves while we read it is retried.
+func (s *slot[T]) refresh(prev *snapshot[T]) (snap *snapshot[T], settled bool) {
 	if s.path == "" {
-		return &snapshot[T]{}
+		return &snapshot[T]{}, true
 	}
 	st, err := statFile(s.path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return &snapshot[T]{} // removed or never created: no rules, no error
+		return &snapshot[T]{}, true // removed or never created: no rules, no error
 	}
-	keep := func(err error) *snapshot[T] {
-		n := &snapshot[T]{err: err, stamp: st, exists: true}
+	keep := func(err error, stamp fileStamp) *snapshot[T] {
+		n := &snapshot[T]{err: err, stamp: stamp, exists: true}
 		if prev != nil {
 			n.val, n.hadGood = prev.val, prev.hadGood
 		}
 		return n
 	}
 	if err != nil {
-		return keep(err)
+		return keep(err, st), true
 	}
 	if prev != nil && prev.exists && prev.stamp == st {
-		return prev
+		return prev, true
 	}
 	if st.size > maxPolicyBytes {
-		return keep(&FileError{File: s.path, Msg: fmt.Sprintf("file is larger than %d bytes", maxPolicyBytes)})
+		return keep(&FileError{File: s.path, Msg: fmt.Sprintf("file is larger than %d bytes", maxPolicyBytes)}, st), true
 	}
-	data, err := os.ReadFile(s.path)
+	data, err := readFile(s.path)
 	if err != nil {
-		return keep(err)
+		return keep(err, st), true
+	}
+	after, err := statFile(s.path)
+	if err != nil || after != st || int64(len(data)) != st.size {
+		// Mid-write (or replaced while reading): keep what we had, with its
+		// error state, and don't remember this stamp as loaded.
+		n := keep(nil, fileStamp{})
+		if prev != nil {
+			n.err = prev.err
+		}
+		return n, false
+	}
+	if len(data) == 0 && s.emptyErr != "" {
+		return keep(&FileError{File: s.path, Msg: s.emptyErr}, st), true
 	}
 	v, err := s.parse(s.path, data)
 	if err != nil {
-		return keep(err)
+		return keep(err, st), true
 	}
-	return &snapshot[T]{val: v, stamp: st, exists: true, hadGood: true}
+	return &snapshot[T]{val: v, stamp: st, exists: true, hadGood: true}, true
 }
 
 // changed stats the file and compares it with the loaded snapshot.
