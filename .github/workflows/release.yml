@@ -1,7 +1,9 @@
 name: release
+# Manual for now: releases are cut locally with `goreleaser release --clean`.
+# To automate, add a HOMEBREW_TAP_TOKEN secret (fine-grained, contents:write on
+# xasdta/homebrew-tap) and switch this back to `push: tags: ["v*"]`.
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
