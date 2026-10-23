@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"errors"
+	"github.com/xasdta/pilothouse/internal/config"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -232,5 +233,20 @@ func TestIDs(t *testing.T) {
 	}
 	if got := truncate("héllo", 2); got != "h…" {
 		t.Errorf("truncate = %q", got)
+	}
+}
+
+func TestMachineNamePrecedence(t *testing.T) {
+	t.Setenv("PILOTHOUSE_MACHINE", "")
+	host := machineName(nil)
+	if host == "" {
+		t.Fatal("hostname fallback is empty")
+	}
+	t.Setenv("PILOTHOUSE_MACHINE", "  build-box ")
+	if got := machineName(&config.Config{}); got != "build-box" {
+		t.Fatalf("env: got %q", got)
+	}
+	if got := machineName(&config.Config{Machine: "studio"}); got != "studio" {
+		t.Fatalf("config wins over env: got %q", got)
 	}
 }

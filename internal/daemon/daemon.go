@@ -154,7 +154,7 @@ func newDaemon(opts Options) (*Daemon, error) {
 		detector: opts.Presence,
 		guard:    opts.PeerGuard,
 		alive:    opts.Alive,
-		machine:  machineName(),
+		machine:  machineName(cfg),
 		waiters:  newWaiters(),
 		git:      newGitCache(30*time.Second, opts.Now, gitRepoInfo),
 	}
@@ -379,7 +379,14 @@ func acquireLock(path string) (func(), error) {
 	}, nil
 }
 
-func machineName() string {
+// machineName is config `machine`, else $PILOTHOUSE_MACHINE, else the hostname.
+func machineName(cfg *config.Config) string {
+	if cfg != nil && strings.TrimSpace(cfg.Machine) != "" {
+		return strings.TrimSpace(cfg.Machine)
+	}
+	if m := strings.TrimSpace(os.Getenv("PILOTHOUSE_MACHINE")); m != "" {
+		return m
+	}
 	h, err := os.Hostname()
 	if err != nil || h == "" {
 		return "localhost"

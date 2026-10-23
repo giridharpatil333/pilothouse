@@ -53,6 +53,11 @@ type Config struct {
 	// Retention is how long closed requests and raw hook events are kept.
 	Retention Duration `yaml:"retention"` // default 30 days
 
+	// Machine is the name shown in the inbox, the web app and notifications.
+	// Empty means the hostname. Useful when several machines report to one
+	// phone, or to keep the hostname out of screenshots.
+	Machine string `yaml:"machine"`
+
 	// UpdateCheck sends {version, os, arch, monthly-rotating id} once a day.
 	UpdateCheck *bool `yaml:"update_check"` // default true
 }
