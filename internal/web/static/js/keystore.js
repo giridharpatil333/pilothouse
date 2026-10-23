@@ -1,0 +1,109 @@
+/*
+ * Device key store and signed decisions. A classic script shared by the
+ * page (window.AskgateKeys) and the service worker (importScripts), so
+ * both sign decisions with the same canonical format.
+ *
+ * The ECDSA P-256 private key is generated non-extractable and kept in
+ * IndexedDB: it can sign on this device but can never be read out.
+ */
+(function (g) {
+  'use strict';
+
+  var DB_NAME = 'pilothouse';
+  var STORE = 'kv';
+  var KEY = 'device-key';
+
+  function openDB() {
+    return new Promise(function (resolve, reject) {
+      var req = g.indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = function () { req.result.createObjectStore(STORE); };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+    });
+  }
+
+  function tx(mode, fn) {
+    return openDB().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var t = db.transaction(STORE, mode);
+        var req = fn(t.objectStore(STORE)); // an IDBRequest
+        t.oncomplete = function () { db.close(); resolve(req ? req.result : undefined); };
+        t.onerror = function () { db.close(); reject(t.error); };
+        t.onabort = function () { db.close(); reject(t.error); };
+      });
+    });
+  }
+
+  function b64url(buf) {
+    var bytes = new Uint8Array(buf);
+    var s = '';
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return g.btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function randomNonce() {
+    var b = new Uint8Array(18);
+    g.crypto.getRandomValues(b);
+    return b64url(b);
+  }
+
+  /** The exact string the daemon verifies (internal/web CanonicalDecision). */
+  function canonical(id, behavior, scope, ts, nonce) {
+    return ['askgate-decide:v1', id, behavior, scope || 'once', String(ts), nonce].join('\n');
+  }
+
+  function load() {
+    return tx('readonly', function (st) { return st.get(KEY); });
+  }
+
+  /** Creates a fresh key pair (replacing any old one); resolves to the SPKI. */
+  function create() {
+    var subtle = g.crypto && g.crypto.subtle;
+    if (!subtle) return Promise.reject(new Error('This browser cannot create keys here (a secure https connection is required).'));
+    return subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify'])
+      .then(function (pair) {
+        return subtle.exportKey('spki', pair.publicKey).then(function (spki) {
+          var rec = { privateKey: pair.privateKey, publicKey: pair.publicKey, spki: b64url(spki), created: Date.now() };
+          return tx('readwrite', function (st) { return st.put(rec, KEY); }).then(function () { return rec.spki; });
+        });
+      });
+  }
+
+  function clear() {
+    return tx('readwrite', function (st) { return st.delete(KEY); });
+  }
+
+  /**
+   * Signs and posts a decision. Resolves to {ok, status, data}; never
+   * rejects on HTTP errors so callers can roll back optimistic UI.
+   */
+  function decide(id, behavior, scope, message) {
+    scope = scope || 'once';
+    return load().then(function (rec) {
+      if (!rec || !rec.privateKey) {
+        return { ok: false, status: 0, data: { code: 'no_key', error: 'This device has no signing key. Pair it again.' } };
+      }
+      var ts = Date.now();
+      var nonce = randomNonce();
+      var msg = new TextEncoder().encode(canonical(id, behavior, scope, ts, nonce));
+      return g.crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, rec.privateKey, msg).then(function (sig) {
+        var body = { behavior: behavior, scope: scope, ts: ts, nonce: nonce, sig: b64url(sig) };
+        if (message) body.message = message;
+        return g.fetch('/api/requests/' + encodeURIComponent(id) + '/decide', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-Askgate': '1' },
+          body: JSON.stringify(body)
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            return { ok: res.ok, status: res.status, data: data };
+          });
+        });
+      });
+    }).catch(function (err) {
+      return { ok: false, status: 0, data: { code: 'network', error: (err && err.message) || 'Network error' } };
+    });
+  }
+
+  g.AskgateKeys = { load: load, create: create, clear: clear, canonical: canonical, decide: decide };
+})(self);

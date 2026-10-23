@@ -1,3 +1,9 @@
 # Shared-file changes
 
 Additive changes to shared files (see BUILD-SPEC §3), newest last: `date — workstream — file — change — why`.
+- 2026-10-22 — F — internal/client/client.go — added `ClientHeader` const ("X-Askgate-Client"), unexported `name` field and `(*Client).WithClientName(name) *Client`; when set, every request (incl. Stream) carries the header — so `approve`/`deny` (By="cli") and the TUI (By="tui") identify themselves as BUILD-SPEC §4 requires, without changing existing call sites.
+- 2026-10-22 — A — internal/client/client.go — added `(*Client).Shutdown(ctx)` (POST /v1/shutdown) — `askgate stop` needs it; the route was in BUILD-SPEC §4 without a client method.
+- 2026-10-22 — A — internal/api/wire.go — added `api.PolicyDecision`, the Data of `policy.decision` events (behavior, rule, file, grant_id, message, tool, summary, matched) — so the TUI/web/`askgate log` can decode it without guessing.
+- 2026-10-22 — B — internal/adapters/adapter.go — added `Change.More []Change` (json `more,omitempty`) — Codex install edits two files (hooks.json + trust entries in config.toml); callers that ignore it keep working.
+- 2026-10-22 — B — new package internal/adapters/hookkit (owned by B) — shared Claude/Codex helpers: Claude-style hooks JSON merge, atomic write + backup, diff, payload parsing, response encoding. Not a shared contract; listed here so other workstreams know it exists.
+- 2026-10-22 — F — go.mod (note only, not edited) — internal/tui now imports `github.com/charmbracelet/x/ansi` (width-aware truncate/wrap) and its tests import `github.com/muesli/termenv`; both are already in go.mod as `// indirect`, so the build is fine, but the next `go mod tidy` will promote them to direct requirements. `internal/deps` can drop its bubbletea/lipgloss/bubbles imports now that internal/tui uses them.

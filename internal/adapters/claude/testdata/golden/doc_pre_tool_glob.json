@@ -1,0 +1,19 @@
+{
+  "kind": "pre_tool",
+  "vendor_event": "PreToolUse",
+  "agent_session_id": "abc123",
+  "cwd": "/home/user/project",
+  "transcript_path": "/home/user/.claude/projects/-home-user-project/abc123.jsonl",
+  "tool_use_id": "toolu_01GLOB",
+  "tool": "Glob",
+  "tool_kind": "read",
+  "paths": [
+    "/home/user/project/src"
+  ],
+  "input": {
+    "pattern": "**/*.ts",
+    "path": "/home/user/project/src"
+  },
+  "summary": "Find files: **/*.ts in src",
+  "permission_mode": "default"
+}

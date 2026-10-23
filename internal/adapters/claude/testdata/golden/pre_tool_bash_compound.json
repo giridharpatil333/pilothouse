@@ -1,0 +1,17 @@
+{
+  "kind": "pre_tool",
+  "vendor_event": "PreToolUse",
+  "agent_session_id": "4fb3d45d-6372-4895-aa89-d2248b0e0959",
+  "cwd": "/home/user/project",
+  "transcript_path": "/home/user/.claude/projects/-home-user-project/4fb3d45d-6372-4895-aa89-d2248b0e0959.jsonl",
+  "tool_use_id": "toolu_01A4CwPgKp63cK262Cqi5AoY",
+  "tool": "Bash",
+  "tool_kind": "shell",
+  "command": "find . -maxdepth 1 -name '*.txt' && grep -n 'bye' ./*.txt",
+  "input": {
+    "command": "find . -maxdepth 1 -name '*.txt' && grep -n 'bye' ./*.txt",
+    "description": "Find txt files and grep for bye"
+  },
+  "summary": "Run: find . -maxdepth 1 -name '*.txt' && grep -n 'bye' ./*.txt",
+  "permission_mode": "acceptEdits"
+}

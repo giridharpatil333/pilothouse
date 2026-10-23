@@ -1,0 +1,30 @@
+ askgate  studio.local                  ● here · auto   3 need you · 2 working · 2 waiting   ● live
+
+── Explain s_k3m9q2 · claude · askgate · feat/inbox ────────────────────────────────────────────────
+  state  blocked (permission) · picked by: 2: an open permission request exists
+  detail Asked to run git push
+
+  WHEN       LAYER      STATE                EVIDENCE
+  12s ago    L2-hook    blocked/permission   PermissionRequest Bash: git push origin feat/inbox -…
+  15s ago    L2-hook    working              PreToolUse Bash
+  14m ago    L1-osc     working              OSC 7501 state=working
+
+  Faint lines are stale and no longer count.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ esc back   q quit

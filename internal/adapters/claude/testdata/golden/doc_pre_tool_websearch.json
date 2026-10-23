@@ -1,0 +1,15 @@
+{
+  "kind": "pre_tool",
+  "vendor_event": "PreToolUse",
+  "agent_session_id": "abc123",
+  "cwd": "/home/user/project",
+  "transcript_path": "/home/user/.claude/projects/-home-user-project/abc123.jsonl",
+  "tool_use_id": "toolu_01WS",
+  "tool": "WebSearch",
+  "tool_kind": "web",
+  "input": {
+    "query": "react hooks best practices"
+  },
+  "summary": "Search the web: react hooks best practices",
+  "permission_mode": "default"
+}

@@ -1,0 +1,16 @@
+# Written by askgate service install. Changes are overwritten.
+[Unit]
+Description=Askgate daemon: one inbox for every coding agent
+Documentation=https://github.com/xasdta/askgate
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/askgate daemon --log-file /opt/askgate-test/home/logs/daemon.log
+Environment=ASKGATE_HOME=/opt/askgate-test/home
+Environment=PATH=/opt/homebrew/bin:/usr/bin:/bin
+Restart=on-failure
+RestartSec=2
+KillMode=process
+
+[Install]
+WantedBy=default.target

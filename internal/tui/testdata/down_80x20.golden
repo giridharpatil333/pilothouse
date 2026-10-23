@@ -1,0 +1,20 @@
+
+
+
+ askgate
+
+   ✗ The Askgate daemon isn't running.
+
+   Start it now              askgate start
+   Start it at every login   askgate service install
+   First time here?          askgate setup
+
+   Retrying every 2s · q to quit
+
+
+
+
+
+
+
+

@@ -1,0 +1,21 @@
+{
+  "kind": "pre_tool",
+  "vendor_event": "PreToolUse",
+  "agent_session_id": "abc123",
+  "cwd": "/home/user/project",
+  "transcript_path": "/home/user/.claude/projects/-home-user-project/abc123.jsonl",
+  "tool_use_id": "toolu_01NB",
+  "tool": "NotebookEdit",
+  "tool_kind": "edit",
+  "paths": [
+    "/home/user/project/analysis.ipynb"
+  ],
+  "input": {
+    "notebook_path": "/home/user/project/analysis.ipynb",
+    "new_source": "print(1)",
+    "cell_id": "c1",
+    "edit_mode": "replace"
+  },
+  "summary": "Edit: analysis.ipynb",
+  "permission_mode": "acceptEdits"
+}

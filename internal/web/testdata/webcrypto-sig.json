@@ -1,0 +1,10 @@
+{
+  "request_id": "r_fixture001",
+  "behavior": "allow",
+  "scope": "session",
+  "ts": 1767225600000,
+  "nonce": "bm9uY2Utd2ViY3J5cHRvLTE",
+  "public_key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEDSk31PkPwGg_EAIo621E1m_bBqvx3FW1Rc-ffWNbGMSdW_znUzqSIJw9DunuxV2ImkM_QEtphFk_8FP1zCKzw",
+  "canonical": "askgate-decide:v1\nr_fixture001\nallow\nsession\n1767225600000\nbm9uY2Utd2ViY3J5cHRvLTE",
+  "sig": "zQ-Ia33dv3AytvCzbdSYn3MBtDD1vsHPRIwCpA9fVh3tPqZHSvIVFbxlFpYkO4apdp5sxRInajWtLgKKcU1l_Q"
+}

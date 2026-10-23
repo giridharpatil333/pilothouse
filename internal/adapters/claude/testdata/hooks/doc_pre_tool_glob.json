@@ -1,0 +1,1 @@
+{"session_id":"abc123","transcript_path":"/home/user/.claude/projects/-home-user-project/abc123.jsonl","cwd":"/home/user/project","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Glob","tool_input":{"pattern":"**/*.ts","path":"/home/user/project/src"},"tool_use_id":"toolu_01GLOB"}

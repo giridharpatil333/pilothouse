@@ -1,0 +1,58 @@
+# GoReleaser config: `goreleaser release --clean` on a v* tag.
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: pilothouse
+    main: ./cmd/pilothouse
+    binary: pilothouse
+    env:
+      - CGO_ENABLED=0 # modernc.org/sqlite is pure Go: static binaries everywhere
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/xasdta/pilothouse/internal/version.Version={{.Version}}
+      - -X github.com/xasdta/pilothouse/internal/version.Commit={{.ShortCommit}}
+      - -X github.com/xasdta/pilothouse/internal/version.Date={{.Date}}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    name_template: "pilothouse_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files: [LICENSE, README.md]
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude: ["^docs:", "^test:", "^chore:"]
+
+brews:
+  - name: pilothouse
+    repository:
+      owner: xasdta
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: https://pilothouse.dev
+    description: One inbox for every coding agent — rules before every tool call, approvals from your phone
+    license: Apache-2.0
+    install: |
+      bin.install "pilothouse"
+    test: |
+      system "#{bin}/pilothouse", "version"
+
+release:
+  github:
+    owner: xasdta
+    name: pilothouse
+  footer: |
+    Install: `curl -fsSL https://pilothouse.dev/install.sh | sh` or `brew install xasdta/tap/pilothouse`, then run `pilothouse setup`.

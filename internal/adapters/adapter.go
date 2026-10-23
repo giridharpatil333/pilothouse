@@ -111,6 +111,9 @@ type Change struct {
 	After   string `json:"after,omitempty"`
 	Summary string `json:"summary"`
 	Backup  string `json:"backup,omitempty"` // path of the backup written before changing
+	// More lists further files the same operation changes (Codex: hook
+	// trust entries in config.toml next to hooks.json).
+	More []Change `json:"more,omitempty"`
 }
 
 // HookStatus reports whether Askgate's hooks are installed and current.

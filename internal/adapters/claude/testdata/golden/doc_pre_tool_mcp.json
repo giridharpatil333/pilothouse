@@ -1,0 +1,20 @@
+{
+  "kind": "pre_tool",
+  "vendor_event": "PreToolUse",
+  "agent_session_id": "abc123",
+  "cwd": "/home/user/project",
+  "transcript_path": "/home/user/.claude/projects/-home-user-project/abc123.jsonl",
+  "tool_use_id": "toolu_01MCP",
+  "tool": "mcp__memory__create_entities",
+  "tool_kind": "mcp",
+  "input": {
+    "entities": [
+      {
+        "name": "Ada",
+        "entityType": "person"
+      }
+    ]
+  },
+  "summary": "MCP memory: create_entities",
+  "permission_mode": "default"
+}

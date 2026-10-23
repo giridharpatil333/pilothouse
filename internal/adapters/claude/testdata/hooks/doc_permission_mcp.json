@@ -1,0 +1,1 @@
+{"session_id":"abc123","transcript_path":"/home/user/.claude/projects/-home-user-project/abc123.jsonl","cwd":"/home/user/project","permission_mode":"default","hook_event_name":"PermissionRequest","tool_name":"mcp__github__create_pull_request","tool_input":{"owner":"acme","repo":"app","title":"Fix bug"},"mcp_server":{"name":"github","source":"user"}}

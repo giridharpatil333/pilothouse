@@ -1,0 +1,16 @@
+{
+  "kind": "permission",
+  "vendor_event": "PermissionRequest",
+  "agent_session_id": "abc123",
+  "cwd": "/home/user/project",
+  "transcript_path": "/home/user/.claude/projects/-home-user-project/abc123.jsonl",
+  "tool": "mcp__github__create_pull_request",
+  "tool_kind": "mcp",
+  "input": {
+    "owner": "acme",
+    "repo": "app",
+    "title": "Fix bug"
+  },
+  "summary": "MCP github: create_pull_request",
+  "permission_mode": "default"
+}

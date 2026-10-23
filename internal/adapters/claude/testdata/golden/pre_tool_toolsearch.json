@@ -1,0 +1,16 @@
+{
+  "kind": "pre_tool",
+  "vendor_event": "PreToolUse",
+  "agent_session_id": "4fb3d45d-6372-4895-aa89-d2248b0e0959",
+  "cwd": "/home/user/project",
+  "transcript_path": "/home/user/.claude/projects/-home-user-project/4fb3d45d-6372-4895-aa89-d2248b0e0959.jsonl",
+  "tool_use_id": "toolu_01USZPkBoAnreMSgUCow6jcq",
+  "tool": "ToolSearch",
+  "tool_kind": "other",
+  "input": {
+    "query": "select:Glob,Grep",
+    "max_results": 5
+  },
+  "summary": "ToolSearch: select:Glob,Grep",
+  "permission_mode": "acceptEdits"
+}

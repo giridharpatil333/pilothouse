@@ -1,8 +1,397 @@
 package cli
 
-import "github.com/spf13/cobra"
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+	"time"
 
-func newHooksCmd() *cobra.Command { return &cobra.Command{Use: "hooks", RunE: notYet("Hooks")} }
+	"github.com/spf13/cobra"
+	"golang.org/x/term"
+
+	"github.com/xasdta/askgate/internal/adapters"
+	"github.com/xasdta/askgate/internal/adapters/all"
+	"github.com/xasdta/askgate/internal/adapters/hookkit"
+	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/askgate/internal/client"
+	"github.com/xasdta/askgate/internal/config"
+	"github.com/xasdta/askgate/internal/proc"
+)
+
+// ---------------------------------------------------------------- askgate hooks
+
+func newHooksCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "hooks",
+		Short: "Install, remove or check Askgate's hooks in Claude Code and Codex",
+		Long: `Askgate sees agents through their hooks. ` + "`hooks install`" + ` merges a call to
+` + "`askgate hook <agent>`" + ` into each agent's settings (~/.claude/settings.json,
+~/.codex/hooks.json), keeping every other setting and hook, and backs the file
+up first. ` + "`hooks uninstall`" + ` removes exactly what install added.`,
+		Args: cobra.NoArgs,
+	}
+	cmd.AddCommand(newHooksChangeCmd(true), newHooksChangeCmd(false), newHooksStatusCmd())
+	return cmd
+}
+
+func newHooksChangeCmd(install bool) *cobra.Command {
+	var agent string
+	var dryRun bool
+	use, short := "uninstall", "Remove Askgate's hooks (and nothing else)"
+	if install {
+		use, short = "install", "Wire Askgate's hooks into Claude Code and Codex"
+	}
+	cmd := &cobra.Command{
+		Use:   use,
+		Short: short,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			targets, err := hookTargets(agent, install)
+			if err != nil {
+				return err
+			}
+			opts := adapters.InstallOptions{DryRun: dryRun}
+			if install {
+				if opts.ShimPath, err = shimPath(cmd.ErrOrStderr()); err != nil {
+					return err
+				}
+			}
+			return runHooksChange(cmd.OutOrStdout(), targets, opts, install)
+		},
+	}
+	cmd.Flags().StringVar(&agent, "agent", "", "only this agent: claude or codex (default: every agent found on this machine)")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "show the changes without writing anything")
+	return cmd
+}
+
+func runHooksChange(w io.Writer, targets []adapters.Adapter, opts adapters.InstallOptions, install bool) error {
+	var failed []string
+	changed := false
+	for _, a := range targets {
+		var ch adapters.Change
+		var err error
+		if install {
+			ch, err = a.InstallHooks(opts)
+		} else {
+			ch, err = a.UninstallHooks(opts)
+		}
+		if err != nil {
+			fmt.Fprintf(w, "✗ %s: %v\n", a.DisplayName(), err)
+			failed = append(failed, a.DisplayName())
+			continue
+		}
+		changed = changed || ch.Changed
+		printChange(w, a.DisplayName(), ch, opts.DryRun)
+	}
+	switch {
+	case len(failed) > 0:
+		return fmt.Errorf("could not update hooks for %s", strings.Join(failed, ", "))
+	case opts.DryRun && changed:
+		fmt.Fprintln(w, "\nDry run: nothing was written. Run again without --dry-run to apply.")
+	case install && changed:
+		fmt.Fprintln(w, "\nNew agent sessions pick the hooks up; restart sessions that were already running.")
+	}
+	return nil
+}
+
+func printChange(w io.Writer, name string, ch adapters.Change, dryRun bool) {
+	mark := "✓"
+	if !ch.Changed {
+		mark = "·"
+	}
+	fmt.Fprintf(w, "%s %s: %s\n", mark, name, ch.Summary)
+	for _, c := range append([]adapters.Change{ch}, ch.More...) {
+		if !c.Changed {
+			continue
+		}
+		verb := "updated"
+		if dryRun {
+			verb = "would update"
+		}
+		fmt.Fprintf(w, "  %s %s\n", verb, c.Path)
+		if c.Backup != "" {
+			fmt.Fprintf(w, "  backup  %s\n", c.Backup)
+		}
+		if d := hookkit.Diff(c.Path, c.Before, c.After); d != "" {
+			fmt.Fprintln(w, indent(d, "    "))
+		}
+	}
+}
+
+func indent(s, prefix string) string {
+	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
+	for i, l := range lines {
+		lines[i] = prefix + l
+	}
+	return strings.Join(lines, "\n")
+}
+
+func newHooksStatusCmd() *cobra.Command {
+	var agent string
+	var asJSON bool
+	cmd := &cobra.Command{
+		Use:   "status",
+		Short: "Show whether Askgate's hooks are installed and current",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			targets, err := hookTargets(agent, false)
+			if err != nil {
+				return err
+			}
+			// A missing binary path only weakens "current" to "all events
+			// wired"; status must still work from a `go run` build.
+			exe, _ := resolvedExe()
+			return runHooksStatus(cmd.OutOrStdout(), targets, adapters.InstallOptions{ShimPath: exe}, asJSON)
+		},
+	}
+	cmd.Flags().StringVar(&agent, "agent", "", "only this agent: claude or codex")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "print JSON")
+	return cmd
+}
+
+type hookStatusJSON struct {
+	Agent  api.AgentKind       `json:"agent"`
+	Name   string              `json:"name"`
+	Status adapters.HookStatus `json:"status"`
+}
+
+func runHooksStatus(w io.Writer, targets []adapters.Adapter, opts adapters.InstallOptions, asJSON bool) error {
+	var rows []hookStatusJSON
+	for _, a := range targets {
+		st, err := a.Status(opts)
+		if err != nil {
+			st.Problems = append(st.Problems, err.Error())
+		}
+		rows = append(rows, hookStatusJSON{a.Kind(), a.DisplayName(), st})
+	}
+	if asJSON {
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		return enc.Encode(rows)
+	}
+	for _, r := range rows {
+		st := r.Status
+		state := "not installed"
+		switch {
+		case st.Current:
+			state = "installed, current"
+		case st.Installed:
+			state = "installed, needs attention"
+		}
+		fmt.Fprintf(w, "%-12s %-27s %s\n", r.Name, state, st.Path)
+		if len(st.Events) > 0 {
+			fmt.Fprintf(w, "  events: %s\n", strings.Join(st.Events, ", "))
+		}
+		for _, p := range st.Problems {
+			fmt.Fprintf(w, "  ! %s\n", p)
+		}
+		if !st.Installed && len(st.Problems) == 0 {
+			fmt.Fprintf(w, "  run `askgate hooks install --agent %s`\n", r.Agent)
+		}
+	}
+	return nil
+}
+
+// hookTargets resolves --agent. Without it, install targets the agents
+// found on this machine; uninstall and status cover every agent.
+func hookTargets(agent string, install bool) ([]adapters.Adapter, error) {
+	if agent != "" {
+		a := all.Get(api.AgentKind(strings.ToLower(agent)))
+		if a == nil {
+			return nil, fmt.Errorf("unknown agent %q: use claude or codex", agent)
+		}
+		return []adapters.Adapter{a}, nil
+	}
+	var out []adapters.Adapter
+	for _, a := range all.List() {
+		if a == nil {
+			continue
+		}
+		if install && !a.Detect().Installed {
+			continue
+		}
+		out = append(out, a)
+	}
+	if install && len(out) == 0 {
+		return nil, errors.New("found neither Claude Code (~/.claude) nor Codex (~/.codex); pass --agent claude or --agent codex to install anyway")
+	}
+	return out, nil
+}
+
+// shimPath is the binary hooks will call: this one, absolute and with
+// symlinks resolved (shared with `askgate setup`, so both write the same
+// command). A path that will vanish is allowed but warned about.
+func shimPath(warn io.Writer) (string, error) {
+	exe, err := resolvedExe()
+	if err != nil {
+		return "", err
+	}
+	if why := unstableExe(exe); why != "" {
+		fmt.Fprintf(warn, "warning: %s\n", why)
+	}
+	return exe, nil
+}
+
+// ---------------------------------------------------------------- askgate hook <agent>
+
+const (
+	maxHookPayload = 4 << 20         // stdin cap (BUILD-SPEC §6.1)
+	shimTimeout    = 2 * time.Second // non-blocking hook kinds
+	shimEndTimeout = 1 * time.Second // SessionEnd: Claude Code's whole budget is 1.5 s
+	maxAncestors   = 12
+)
+
+// shimEnv is the environment allow-list forwarded to the daemon.
+var shimEnv = []string{"TERM_PROGRAM", "TMUX", "ASKGATE_SESSION_ID", "ASKGATE_TASK_ID", "SSH_CONNECTION"}
+
+// newHookShimCmd is what agents run on every hook: `askgate hook <agent>
+// [event]`. It must never hang, never print anything but the agent's
+// protocol, and fail open (BUILD-SPEC §6.1, invariant 2).
 func newHookShimCmd() *cobra.Command {
-	return &cobra.Command{Use: "hook", Hidden: true, RunE: notYet("hook")}
+	return &cobra.Command{
+		Use:                "hook <agent> [event]",
+		Short:              "Hook entry point called by agents (not for people)",
+		Hidden:             true,
+		DisableFlagParsing: true, // never fail on argv an agent adds
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if code := runShim(args, os.Stdin, os.Stdout, os.Stderr); code != 0 {
+				return ExitError{Code: code}
+			}
+			return nil
+		},
+	}
+}
+
+// runShim forwards one hook to the daemon and relays its answer. Every
+// failure path ends in the adapter's FailResponse.
+func runShim(args []string, stdin io.Reader, stdout, stderr io.Writer) (code int) {
+	if len(args) == 0 {
+		return 0
+	}
+	ad := all.Get(api.AgentKind(args[0]))
+	if ad == nil {
+		return 0 // an unknown agent gets no opinion, never an error
+	}
+	kind := adapters.HookUnknown
+	defer func() {
+		// A bug here must not break the agent: answer like a down daemon.
+		if r := recover(); r != nil {
+			code = writeHookResponse(stdout, stderr, ad.FailResponse(kind, false))
+		}
+	}()
+
+	payload, ok := readHookStdin(stdin, shimTimeout)
+	if !ok {
+		return writeHookResponse(stdout, stderr, ad.FailResponse(kind, false))
+	}
+	env := hookEnvelope(ad.Kind(), args[1:], payload)
+	ev, err := ad.ParseHook(env)
+	if err != nil {
+		return writeHookResponse(stdout, stderr, ad.FailResponse(kind, false))
+	}
+	kind = ev.Kind
+
+	ctx, cancel := context.WithTimeout(context.Background(), hookTimeout(ad, kind))
+	defer cancel()
+	resp, err := client.New().Hook(ctx, env)
+	if err != nil {
+		resp = ad.FailResponse(kind, failClosed(kind))
+	}
+	return writeHookResponse(stdout, stderr, resp)
+}
+
+// hookTimeout: a permission hook may wait for a person up to the agent's
+// own hook timeout; everything else must answer in time for the agent.
+func hookTimeout(ad adapters.Adapter, kind adapters.HookKind) time.Duration {
+	switch kind {
+	case adapters.HookPermission:
+		if d := ad.MaxHold(kind); d > 0 {
+			return d
+		}
+	case adapters.HookSessionEnd:
+		return shimEndTimeout
+	}
+	return shimTimeout
+}
+
+func hookEnvelope(agent api.AgentKind, rest []string, payload []byte) adapters.HookEnvelope {
+	env := adapters.HookEnvelope{
+		Agent:            agent,
+		Payload:          payload,
+		ShimPID:          os.Getpid(),
+		AskgateSessionID: os.Getenv("ASKGATE_SESSION_ID"),
+		ReceivedAt:       time.Now().UTC(),
+	}
+	if len(rest) > 0 {
+		env.Event = rest[0]
+	}
+	env.Cwd, _ = os.Getwd()
+	env.Ancestors, _ = proc.Ancestors(os.Getpid(), maxAncestors)
+	for _, k := range shimEnv {
+		if v := os.Getenv(k); v != "" {
+			if env.Env == nil {
+				env.Env = map[string]string{}
+			}
+			env.Env[k] = v
+		}
+	}
+	return env
+}
+
+// readHookStdin reads the payload: at most maxHookPayload bytes, within
+// timeout. ok is false for a terminal, an oversized or empty payload, or
+// a writer that never closes stdin.
+func readHookStdin(r io.Reader, timeout time.Duration) ([]byte, bool) {
+	if f, isFile := r.(*os.File); isFile && term.IsTerminal(int(f.Fd())) {
+		return nil, false
+	}
+	type result struct {
+		b   []byte
+		err error
+	}
+	done := make(chan result, 1)
+	go func() {
+		defer func() {
+			// runShim's recover cannot see this goroutine.
+			if p := recover(); p != nil {
+				done <- result{err: fmt.Errorf("reading stdin: %v", p)}
+			}
+		}()
+		b, err := io.ReadAll(io.LimitReader(r, maxHookPayload+1))
+		done <- result{b, err}
+	}()
+	select {
+	case res := <-done:
+		if res.err != nil || len(res.b) == 0 || len(res.b) > maxHookPayload {
+			return nil, false
+		}
+		return res.b, true
+	case <-time.After(timeout):
+		return nil, false
+	}
+}
+
+// failClosed reads approvals.fail_closed. It only matters for pre_tool, and
+// only on the failure path, so no other hook call ever parses config.
+// Unreadable config means fail open.
+func failClosed(kind adapters.HookKind) bool {
+	if kind != adapters.HookPreTool {
+		return false
+	}
+	cfg, err := config.Load()
+	return err == nil && cfg.Approvals.FailClosed
+}
+
+func writeHookResponse(stdout, stderr io.Writer, r adapters.HookResponse) int {
+	if r.Stdout != "" {
+		_, _ = io.WriteString(stdout, r.Stdout)
+	}
+	if r.Stderr != "" {
+		_, _ = io.WriteString(stderr, r.Stderr)
+	}
+	return r.ExitCode
 }

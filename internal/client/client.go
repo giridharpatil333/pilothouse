@@ -43,6 +43,20 @@ func IsCode(err error, code string) bool {
 type Client struct {
 	socket string
 	hc     *http.Client
+	name   string // X-Askgate-Client header; see WithClientName
+}
+
+// ClientHeader identifies the caller ("cli", "tui"); the daemon records it
+// as Decision.By for decisions made over the Unix socket.
+const ClientHeader = "X-Askgate-Client"
+
+// WithClientName returns a copy of c that sends name in the
+// X-Askgate-Client header on every request. The copy shares c's
+// connection pool.
+func (c *Client) WithClientName(name string) *Client {
+	cp := *c
+	cp.name = name
+	return &cp
 }
 
 // New returns a client for the default socket.
@@ -76,6 +90,9 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	if c.name != "" {
+		req.Header.Set(ClientHeader, c.name)
 	}
 	resp, err := c.hc.Do(req)
 	if err != nil {
@@ -226,6 +243,13 @@ func (c *Client) NotifyTest(ctx context.Context) error {
 	return c.do(ctx, "POST", "/v1/notify/test", nil, nil)
 }
 
+// Shutdown asks the daemon to stop gracefully (held requests are handed back
+// to the agents' own dialogs first). Errors with "agent_caller" from inside
+// an agent session.
+func (c *Client) Shutdown(ctx context.Context) error {
+	return c.do(ctx, "POST", "/v1/shutdown", nil, nil)
+}
+
 func (c *Client) Pair(ctx context.Context) (api.PairStart, error) {
 	var p api.PairStart
 	return p, c.do(ctx, "POST", "/v1/pair", nil, &p)
@@ -260,6 +284,9 @@ func (c *Client) Stream(ctx context.Context, after int64, fn func(api.Event)) er
 		return err
 	}
 	req.Header.Set("Accept", "text/event-stream")
+	if c.name != "" {
+		req.Header.Set(ClientHeader, c.name)
+	}
 	// No client timeout: the stream is long-lived; ctx ends it.
 	resp, err := c.hc.Do(req)
 	if err != nil {

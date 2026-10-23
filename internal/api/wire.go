@@ -93,3 +93,17 @@ type LoginLink struct {
 	URL       string    `json:"url"`
 	ExpiresAt time.Time `json:"expires_at"`
 }
+
+// PolicyDecision is the Data of a policy.decision event: what the pre_tool
+// checkpoint decided for one tool call when a rule or a session grant
+// matched.
+type PolicyDecision struct {
+	Behavior Behavior `json:"behavior"`           // allow | ask | deny
+	Rule     string   `json:"rule,omitempty"`     // deciding rule (empty when a grant decided)
+	File     string   `json:"file,omitempty"`     // file the rule came from ("builtin" for built-ins)
+	GrantID  string   `json:"grant_id,omitempty"` // grant that allowed the call
+	Message  string   `json:"message,omitempty"`
+	Tool     string   `json:"tool"`
+	Summary  string   `json:"summary,omitempty"`
+	Matched  []string `json:"matched,omitempty"` // every rule that matched, "name (action)"
+}

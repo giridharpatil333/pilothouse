@@ -1,0 +1,10 @@
+{
+  "kind": "notification",
+  "vendor_event": "Notification",
+  "agent_session_id": "abc123",
+  "cwd": "/home/user/project",
+  "transcript_path": "/home/user/.claude/projects/-home-user-project/abc123.jsonl",
+  "message": "Claude needs your permission to use Bash",
+  "notification_type": "permission_prompt",
+  "summary": "Claude needs your permission to use Bash"
+}

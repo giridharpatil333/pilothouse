@@ -1,0 +1,24 @@
+{
+  "kind": "pre_tool",
+  "vendor_event": "PreToolUse",
+  "agent_session_id": "abc123",
+  "cwd": "/home/user/project",
+  "transcript_path": "/home/user/.claude/projects/-home-user-project/abc123.jsonl",
+  "tool_use_id": "toolu_01ME",
+  "tool": "MultiEdit",
+  "tool_kind": "edit",
+  "paths": [
+    "/home/user/project/src/app.go"
+  ],
+  "input": {
+    "file_path": "/home/user/project/src/app.go",
+    "edits": [
+      {
+        "old_string": "a",
+        "new_string": "b"
+      }
+    ]
+  },
+  "summary": "Edit: src/app.go",
+  "permission_mode": "default"
+}

@@ -1,0 +1,153 @@
++-o Root  <class IORegistryEntry, id 0x100000100, retain 41>
+  +-o J575cAP  <class IOPlatformExpertDevice, id 0x100000300, registered, matched, active, busy 0 (192847 ms), retain 46>
+    +-o options  <class IODTNVRAM, id 0x100000301, registered, matched, active, busy 0 (16 ms), retain 19>
+    | +-o IODTNVRAMDiags  <class IODTNVRAMDiags, id 0x100000302, registered, matched, active, busy 0 (15 ms), retain 6>
+    | +-o IODTNVRAMPlatformNotifier  <class IODTNVRAMPlatformNotifier, id 0x100000303, registered, matched, active, busy 0 (15 ms), retain 6>
+    | +-o options-system  <class IODTNVRAMVariables, id 0x100000304, registered, matched, active, busy 0 (14 ms), retain 6>
+    | +-o options-common  <class IODTNVRAMVariables, id 0x100000305, registered, matched, active, busy 0 (14 ms), retain 6>
+    +-o AppleARMPE  <class AppleARMPE, id 0x100000306, registered, matched, active, busy 0 (65319 ms), retain 55>
+    | +-o IOSystemStateNotification  <class IOSystemStateNotification, id 0x10000030a, registered, matched, active, busy 0 (0 ms), retain 7>
+    | +-o IOPMrootDomain  <class IOPMrootDomain, id 0x10000030b, registered, matched, active, busy 0 (3108 ms), retain 225>
+    | +-o cpu0@0  <class IOPlatformDevice, id 0x10000030e, registered, matched, active, busy 0 (4 ms), retain 8>
+    | +-o cpu1@1  <class IOPlatformDevice, id 0x10000030f, registered, matched, active, busy 0 (1 ms), retain 8>
+    | +-o cpu2@2  <class IOPlatformDevice, id 0x100000310, registered, matched, active, busy 0 (1 ms), retain 8>
+    | +-o cpu3@3  <class IOPlatformDevice, id 0x100000311, registered, matched, active, busy 0 (1 ms), retain 8>
+    | +-o cpu4@100  <class IOPlatformDevice, id 0x100000312, registered, matched, active, busy 0 (1 ms), retain 8>
+    | +-o cpu5@101  <class IOPlatformDevice, id 0x100000313, registered, matched, active, busy 0 (3 ms), retain 8>
+    | +-o cpu6@102  <class IOPlatformDevice, id 0x100000314, registered, matched, active, busy 0 (4 ms), retain 8>
+    | +-o cpu7@103  <class IOPlatformDevice, id 0x100000315, registered, matched, active, busy 0 (3 ms), retain 8>
+    | +-o cpu8@104  <class IOPlatformDevice, id 0x100000316, registered, matched, active, busy 0 (6 ms), retain 8>
+    | +-o cpu10@200  <class IOPlatformDevice, id 0x100000317, registered, matched, active, busy 0 (3 ms), retain 8>
+    | +-o cpu11@201  <class IOPlatformDevice, id 0x100000318, registered, matched, active, busy 0 (5 ms), retain 8>
+    | +-o cpu12@202  <class IOPlatformDevice, id 0x100000319, registered, matched, active, busy 0 (4 ms), retain 8>
+    | +-o cpu13@203  <class IOPlatformDevice, id 0x10000031a, registered, matched, active, busy 0 (4 ms), retain 8>
+    | +-o cpu14@204  <class IOPlatformDevice, id 0x10000031b, registered, matched, active, busy 0 (4 ms), retain 8>
+    | +-o cpus  <class IOPlatformDevice, id 0x10000031c, registered, matched, active, busy 0 (20 ms), retain 20>
+    | +-o pram@E635C000  <class IOPlatformDevice, id 0x10000031d, registered, matched, active, busy 0 (6 ms), retain 6>
+    | +-o vram@E46E0000  <class IOPlatformDevice, id 0x10000031e, registered, matched, active, busy 0 (3 ms), retain 7>
+    | +-o socd-trace-ram@DE67014  <class IOPlatformDevice, id 0x10000031f, registered, matched, active, busy 0 (3 ms), retain 6>
+    | +-o hibernate  <class IOPlatformDevice, id 0x100000320, registered, matched, active, busy 0 (32 ms), retain 6>
+    | +-o amfm  <class IOPlatformDevice, id 0x100000321, registered, matched, active, busy 0 (830 ms), retain 7>
+    | +-o arm-io@10F00000  <class IOPlatformDevice, id 0x100000322, registered, matched, active, busy 0 (62866 ms), retain 193>
+    | +-o buttons  <class IOPlatformDevice, id 0x100000323, registered, matched, active, busy 0 (840 ms), retain 8>
+    | +-o port-usb-c-1  <class IOPlatformDevice, id 0x100000324, registered, matched, active, busy 0 (6 ms), retain 7>
+    | +-o port-usb-c-2  <class IOPlatformDevice, id 0x100000325, registered, matched, active, busy 0 (5 ms), retain 7>
+    | +-o port-usb-c-3  <class IOPlatformDevice, id 0x100000326, registered, matched, active, busy 0 (5 ms), retain 7>
+    | +-o port-usb-c-4  <class IOPlatformDevice, id 0x100000327, registered, matched, active, busy 0 (5 ms), retain 7>
+    | +-o port-hdmi0  <class IOPlatformDevice, id 0x100000328, registered, matched, active, busy 0 (19 ms), retain 6>
+    | +-o port-usb-a-1  <class IOPlatformDevice, id 0x100000329, registered, matched, active, busy 0 (24 ms), retain 8>
+    | +-o port-usb-a-2  <class IOPlatformDevice, id 0x10000032a, registered, matched, active, busy 0 (26 ms), retain 8>
+    | +-o port-usb-c-5  <class IOPlatformDevice, id 0x10000032b, registered, matched, active, busy 0 (2 ms), retain 8>
+    | +-o port-usb-c-6  <class IOPlatformDevice, id 0x100000330, registered, matched, active, busy 0 (5 ms), retain 8>
+    | +-o pcie-sdreader-helper  <class IOPlatformDevice, id 0x100000331, registered, matched, active, busy 0 (1051 ms), retain 7>
+    | +-o sacm  <class IOPlatformDevice, id 0x100000332, registered, matched, active, busy 0 (6 ms), retain 7>
+    | +-o defaults  <class IOPlatformDevice, id 0x100000333, registered, matched, active, busy 0 (808 ms), retain 10>
+    | +-o product  <class IOPlatformDevice, id 0x100000334, registered, matched, active, busy 0 (19 ms), retain 19>
+    | +-o iboot-syscfg  <class IOPlatformDevice, id 0x100000335, registered, matched, active, busy 0 (5 ms), retain 7>
+    | +-o filesystems-props  <class IOPlatformDevice, id 0x100000336, registered, matched, active, busy 0 (3 ms), retain 6>
+    | +-o PassthruInterruptController  <class PassthruInterruptController, id 0x10000033f, registered, matched, active, busy 0 (0 ms), retain 7>
+    | +-o APCIECMSIController-apciec0  <class APCIECMSIController, id 0x100000490, registered, matched, active, busy 0 (89 ms), retain 7>
+    | +-o ApplePCIECLegacyIntController-apciec0  <class ApplePCIECLegacyIntController, id 0x100000547, registered, matched, active, busy 0 (24 ms), retain 7>
+    | +-o APCIECMSIController-apciec1  <class APCIECMSIController, id 0x10000054d, registered, matched, active, busy 0 (16 ms), retain 7>
+    | +-o ApplePCIECLegacyIntController-apciec1  <class ApplePCIECLegacyIntController, id 0x100000551, registered, matched, active, busy 0 (28 ms), retain 7>
+    | +-o APCIECMSIController-apciec3  <class APCIECMSIController, id 0x1000005bd, registered, matched, active, busy 0 (43 ms), retain 7>
+    | +-o ApplePCIECLegacyIntController-apciec3  <class ApplePCIECLegacyIntController, id 0x1000005ce, registered, matched, active, busy 0 (126 ms), retain 7>
+    | +-o ApplePCIEMSIController-apcie0  <class ApplePCIEMSIController, id 0x10000061d, registered, matched, active, busy 0 (79 ms), retain 7>
+    | +-o APCIECMSIController-apciec2  <class APCIECMSIController, id 0x100000632, registered, matched, active, busy 0 (28 ms), retain 7>
+    | +-o ApplePCIECLegacyIntController-apciec2  <class ApplePCIECLegacyIntController, id 0x10000063b, registered, matched, active, busy 0 (68 ms), retain 7>
+    +-o IOResources  <class IOResources, id 0x100000308, registered, matched, active, busy 0 (131596 ms), retain 350>
+    | +-o com_apple_driver_FairPlayIOKit  <class com_apple_driver_FairPlayIOKit, id 0x10000034c, registered, matched, active, busy 0 (0 ms), retain 9>
+    | +-o AUC  <class AUC, id 0x10000034d, registered, matched, active, busy 0 (0 ms), retain 5>
+    | +-o AppleARMBootPerf  <class AppleARMBootPerf, id 0x10000034e, !registered, !matched, active, busy 0, retain 5>
+    | +-o AppleARMSFRManifest  <class AppleARMSFRManifest, id 0x10000034f, !registered, !matched, active, busy 0, retain 4>
+    | +-o AppleMesaResources  <class AppleMesaResources, id 0x100000350, registered, matched, active, busy 0 (0 ms), retain 5>
+    | +-o AppleCredentialManager  <class AppleCredentialManager, id 0x100000351, registered, matched, active, busy 0 (32 ms), retain 23>
+    | +-o AppleDiskImagesController  <class AppleDiskImagesController, id 0x100000352, registered, matched, active, busy 0 (43 ms), retain 7>
+    | +-o AppleFDEKeyStore  <class AppleFDEKeyStore, id 0x100000353, registered, matched, active, busy 0 (0 ms), retain 6>
+    | +-o ANEDriverRoot  <class H1xANELoadBalancer, id 0x100000354, registered, matched, active, busy 0 (1874 ms), retain 13>
+    | +-o AppleIPAppender  <class AppleIPAppender, id 0x100000355, registered, matched, active, busy 0 (0 ms), retain 6>
+    | +-o AppleLockdownMode  <class AppleLockdownMode, id 0x100000356, !registered, !matched, active, busy 0, retain 4>
+    | +-o AppleRSMChannelController  <class AppleRSMChannelController, id 0x100000357, registered, matched, active, busy 0 (2 ms), retain 6>
+    | +-o AppleKeyStore  <class AppleKeyStore, id 0x100000358, registered, matched, active, busy 0 (22299 ms), retain 113>
+    | +-o AppleKeyStoreTest  <class AppleKeyStoreTest, id 0x100000359, !registered, !matched, active, busy 0, retain 4>
+    | +-o AppleT6041ANEHAL  <class AppleT6041ANEHAL, id 0x10000035a, registered, matched, active, busy 0 (0 ms), retain 5>
+    | +-o AppleUIOMem  <class AppleUIOMem, id 0x10000035b, registered, matched, active, busy 0 (0 ms), retain 5>
+    | +-o CoreAnalyticsHub  <class CoreAnalyticsHub, id 0x10000035c, registered, matched, active, busy 0 (0 ms), retain 23>
+    | +-o EndpointSecurityDriver  <class EndpointSecurityDriver, id 0x10000035d, registered, matched, active, busy 0 (1 ms), retain 9>
+    | +-o IOBluetoothHCIController  <class IOBluetoothHCIController, id 0x10000035e, registered, matched, active, busy 0 (282 ms), retain 11>
+    | +-o IODisplayWrangler  <class IODisplayWrangler, id 0x10000035f, registered, matched, active, busy 0 (0 ms), retain 5>
+    | +-o IOHDIXController  <class IOHDIXController, id 0x100000360, registered, matched, active, busy 0 (10 ms), retain 5>
+    | +-o IOKitRegistryCompatibility  <class IOKitRegistryCompatibility, id 0x100000361, !registered, !matched, active, busy 0 (28 ms), retain 6>
+    | +-o IOReportHub  <class IOReportHub, id 0x100000362, registered, matched, active, busy 0 (132 ms), retain 16>
+    | +-o AppleUSBHostResourcesTypeC  <class AppleUSBHostResourcesTypeC, id 0x100000365, registered, matched, active, busy 0 (0 ms), retain 63>
+    | +-o AppleUSBUserHCIResources  <class AppleUSBUserHCIResources, id 0x100000369, registered, matched, active, busy 0 (0 ms), retain 5>
+    | +-o IOUSBMassStorageResource  <class IOUSBMassStorageResource, id 0x10000036a, registered, matched, active, busy 0 (0 ms), retain 6>
+    | +-o IOUserEthernetResource  <class IOUserEthernetResource, id 0x10000036b, registered, matched, active, busy 0 (0 ms), retain 5>
+    | +-o IOTimeSyncRootService  <class IOTimeSyncRootService, id 0x10000073e, registered, matched, active, busy 0 (7 ms), retain 7>
+    | +-o IOAVBValidate  <class IOAVBValidate, id 0x100000755, registered, matched, active, busy 0 (0 ms), retain 5>
+    | +-o com_apple_AppleFSCompression_AppleFSCompressionTypeDataless  <class com_apple_AppleFSCompression_AppleFSCompressionTypeDataless, id 0x10000095f, !registered, !matched, active, busy 0, retain 4>
+    | +-o com_apple_AppleFSCompression_AppleFSCompressionTypeZlib  <class com_apple_AppleFSCompression_AppleFSCompressionTypeZlib, id 0x100000960, !registered, !matched, active, busy 0, retain 4>
+    | +-o AppleMobileFileIntegrity  <class AppleMobileFileIntegrity, id 0x100000961, registered, matched, active, busy 0 (134 ms), retain 7>
+    | +-o AppleGCResource  <class AppleGCResource, id 0x100000962, registered, matched, active, busy 0 (3 ms), retain 7>
+    | +-o AppleSystemPolicy  <class AppleSystemPolicy, id 0x100000963, registered, matched, active, busy 0 (0 ms), retain 8>
+    | +-o com_apple_BootCache  <class com_apple_BootCache, id 0x100000964, !registered, !matched, active, busy 0, retain 4>
+    | +-o BootPolicy  <class BootPolicy, id 0x100000965, registered, matched, active, busy 0 (10 ms), retain 13>
+    | +-o com_apple_filesystems_hfs  <class com_apple_filesystems_hfs, id 0x100000966, !registered, !matched, active, busy 0, retain 4>
+    | +-o com_apple_filesystems_hfs_encodings  <class com_apple_filesystems_hfs_encodings, id 0x100000967, !registered, !matched, active, busy 0, retain 4>
+    | +-o IOHIDResource  <class IOHIDResource, id 0x100000968, registered, matched, active, busy 0 (2117 ms), retain 9>
+    | +-o IOHIDSystem  <class IOHIDSystem, id 0x100000969, registered, matched, active, busy 0 (632 ms), retain 14>
+    | |   {
+    | |     "IOClass" = "IOHIDSystem"
+    | |     "HIDScrollCountMaxTimeDeltaBetween" = 600
+    | |     "IOPersonalityPublisher" = "com.apple.iokit.IOHIDFamily"
+    | |     "IOResourceMatch" = "IOBSD"
+    | |     "IOMatchedAtBoot" = Yes
+    | |     "HIDServiceGlobalModifiersUsage" = 1
+    | |     "IOProviderClass" = "IOResources"
+    | |     "IOReportLegendPublic" = Yes
+    | |     "IOProbeScore" = 0
+    | |     "HIDIdleTime" = 26243791
+    | |     "HIDScrollCountIgnoreMomentumScrolls" = Yes
+    | |     "HIDScrollCountAccelerationFactor" = 163840
+    | |     "HIDServiceSupport" = Yes
+    | |     "HIDScrollCountMouseCanReset" = Yes
+    | |     "IOCFPlugInTypes" = {"0516B563-B15B-11DA-96EB-0014519758EF"="IOHIDFamily.kext/Contents/PlugIns/IOHIDNXEventRouter.plugin"}
+    | |     "VendorID" = 1452
+    | |     "CFBundleIdentifierKernel" = "com.apple.iokit.IOHIDFamily"
+    | |     "HIDScrollCountMinDeltaToSustain" = 20
+    | |     "IOMatchCategory" = "IOHID"
+    | |     "CFBundleIdentifier" = "com.apple.iokit.IOHIDFamily"
+    | |     "HIDScrollCountBootDefault" = {"HIDScrollCountMinDeltaToStart"=30,"HIDScrollCountAccelerationFactor"=163840,"HIDScrollCountMouseCanReset"=Yes,"HIDScrollCountIgnoreMomentumScrolls"=Yes,"HIDScrollCountMinDeltaToSustain"=20,"HIDScrollCountMax"=2000,"HIDScrollCountMaxTimeDeltaBetween"=600,"HIDScrollCountMaxTimeDeltaToSustain"=250}
+    | |     "PrimaryUsage" = 23
+    | |     "CursorState" = {}
+    | |     "HIDPowerOnDelayNS" = 500000000
+    | |     "IOGeneralInterest" = "IOCommand is not serializable"
+    | |     "PrimaryUsagePage" = 65280
+    | |     "HIDScrollCountMinDeltaToStart" = 30
+    | |     "HIDScrollCountMaxTimeDeltaToSustain" = 250
+    | |     "IOReportLegend" = ({"IOReportGroupName"="Cursor","IOReportChannels"=((4860917212932887663,64426082307,"Cursor Total Latency")),"IOReportChannelInfo"={"IOReportChannelConfig"=<6400000000000000000000000a000000204e0000000000000100000005000000>,"IOReportChannelUnit"=72058113728970752},"IOReportSubGroupName"="Total"},{"IOReportGroupName"="Cursor","IOReportChannels"=((4860917212932884338,64426082307,"Cursor Graphics Latency")),"IOReportChannelInfo"={"IOReportChannelConfig"=<6400000000000000000000000a000000204e0000000000000100000005000000>,"IOReportChannelUnit"=72058113728970752},"IOReportSubGroupName"="Graphics"})
+    | |     "HIDParameters" = {"HIDMouseKeysOptionToggles"=0,"JitterNoClick"=1,"ActuateDetents"=1,"Dragging"=0,"HIDSlowKeysDelay"=0,"JitterNoMove"=1,"TrackpadThreeFingerHorizSwipeGesture"=2,"HIDInitialKeyRepeat"=500000000,"TrackpadThreeFingerDrag"=No,"HIDPointerAcceleration"=45056,"UserPreferences"=Yes,"HIDDefaultParameters"=Yes,"TrackpadHorizScroll"=1,"HIDF12EjectDelay"=250,"TrackpadFourFingerVertSwipeGesture"=2,"TrackpadTwoFingerFromRightEdgeSwipeGesture"=3,"USBMouseStopsTrackpad"=0,"TrackpadThreeFingerTapGesture"=2,"MouseOneFingerDoubleTapGesture"=0,"HIDScrollZoomModifierMask"=0,"TrackpadScroll"=Yes,"HIDUseLinearScalingMouseAcceleration"=0,"Trackpad Jitter Milliseconds"=192,"HIDPointerButtonMode"=2,"HIDKeyboardModifierMappingPairs"=(),"TrackpadFourFingerHorizSwipeGesture"=2,"DragLock"=0,"TwofingerNoAction"=1,"MouseTwoFingerDoubleTapGesture"=3,"HIDClickTime"=500000000,"HIDMouseAcceleration"=98304,"SecondClickThreshold"=1,"HIDStickyKeysShiftToggles"=0,"TrackpadHandResting"=Yes,"TrackpadFourFingerPinchGesture"=2,"MouseMomentumScroll"=Yes,"TrackpadFiveFingerPinchGesture"=2,"PalmNoAction Permanent"=1,"MouseButtonMode"="OneButton","TrackpadThreeFingerVertSwipeGesture"=2,"OutsidezoneNoAction When Typing"=1,"ForceSuppressed"=No,"TrackpadCornerSecondaryClick"=0,"MouseButtonDivision"=55,"HIDStickyKeysOn"=0,"HIDStickyKeysDisabled"=0,"EjectDelay"=0,"TrackpadPinch"=1,"FirstClickThreshold"=1,"HIDClickSpace"=(0,0),"PalmNoAction When Typing"=1,"MouseVerticalScroll"=Yes,"version"=1,"MouseHorizontalScroll"=Yes,"TrackpadMomentumScroll"=Yes,"MouseTwoFingerHorizSwipeGesture"=2,"HIDKeyRepeat"=83333333,"TrackpadTwoFingerDoubleTapGesture"=1,"Clicking"=0,"TrackpadRightClick"=Yes,"TrackpadRotate"=1,"Use Panther Settings for W"=0,"HIDScrollAcceleration"=20480,"HIDFKeyMode"=0}
+    | |     "HIDScrollCountMax" = 2000
+    | |   }
+    | |   
+    | +-o IOHIDPowerSourceController  <class IOHIDPowerSourceController, id 0x10000096a, !registered, !matched, active, busy 0, retain 5>
+    | +-o IONetworkStack  <class IONetworkStack, id 0x10000096b, registered, matched, active, busy 0 (1 ms), retain 36>
+    | +-o IOSurfaceRoot  <class IOSurfaceRoot, id 0x10000096c, registered, matched, active, busy 0 (4532 ms), retain 296>
+    | +-o AppleFairplayTextCrypter  <class AppleFairplayTextCrypter, id 0x10000096d, !registered, !matched, active, busy 0, retain 5>
+    | +-o com_apple_filesystems_apfs  <class com_apple_filesystems_apfs, id 0x100000970, !registered, !matched, active, busy 0, retain 4>
+    | +-o com_apple_filesystems_lifs  <class com_apple_filesystems_lifs, id 0x100000971, registered, matched, active, busy 0 (4 ms), retain 7>
+    | +-o com_apple_filesystems_nfs  <class com_apple_filesystems_nfs, id 0x100000972, !registered, !matched, active, busy 0, retain 4>
+    | +-o AppleBSDKextStarterTMPFS  <class AppleBSDKextStarter, id 0x100000973, !registered, !matched, active, busy 0, retain 4>
+    | +-o AppleBSDKextStarterVPN  <class AppleBSDKextStarter, id 0x100000974, !registered, !matched, active, busy 0, retain 4>
+    | +-o IOAVBNub  <class IOAVBNub, id 0x100000fdf, registered, matched, active, busy 0 (4 ms), retain 5>
+    | +-o AppleSCSISubsystemGlobals  <class AppleSCSISubsystemGlobals, id 0x100001040, registered, matched, active, busy 0 (0 ms), retain 6>
+    +-o IOUserResources  <class IOUserResources, id 0x100000309, registered, matched, active, busy 0 (165 ms), retain 9>
+    | +-o IOUserDockChannelSerial  <class IOUserService, id 0x1000011bc, registered, matched, active, busy 0 (2 ms), retain 8>
+    +-o IOUserServer(com.apple.IOUserDockChannelSerial-0x1000011bc)  <class IOUserServer, id 0x1000011cc, registered, matched, active, busy 0 (0 ms), retain 11>
+    +-o IOUserServer(com.apple.driverkit.AppleUserHIDDrivers-0x1000011c4)  <class IOUserServer, id 0x1000011cd, registered, matched, active, busy 0 (1 ms), retain 15>
+    +-o IOUserServer(com.apple.bcmwlan-0x1000011c7)  <class IOUserServer, id 0x1000011de, registered, matched, active, busy 0 (0 ms), retain 83>
+    +-o IOUserServer(com.apple.IOUserBluetoothSerialDriver-0x100001423)  <class IOUserServer, id 0x10000142a, registered, matched, active, busy 0 (0 ms), retain 13>
+    +-o IOUserServer(com.apple.IOUserBluetoothSerialDriver-0x100001425)  <class IOUserServer, id 0x100001430, registered, matched, active, busy 0 (2 ms), retain 13>
+    +-o IOUserServer(com.apple.IOUserBluetoothSerialDriver-0x100001427)  <class IOUserServer, id 0x100001436, registered, matched, active, busy 0 (0 ms), retain 14>
+    +-o IOUserServer(com.apple.DriverKit.AppleUserECM.ctrl-0x1000330eb)  <class IOUserServer, id 0x1000330ef, registered, matched, active, busy 0 (1 ms), retain 11>
+    +-o IOUserServer(com.apple.DriverKit.AppleUserECM.data-0x1000330e8)  <class IOUserServer, id 0x1000330f0, registered, matched, active, busy 0 (0 ms), retain 11>
