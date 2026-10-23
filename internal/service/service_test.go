@@ -111,10 +111,10 @@ func TestQuoting(t *testing.T) {
 	tests := map[string]string{
 		"/usr/bin/pilothouse":   "/usr/bin/pilothouse",
 		"/Users/a b/pilothouse": `"/Users/a b/pilothouse"`,
-		"100%":               "100%%",
-		`PATH=$HOME/bin`:     `PATH=$$HOME/bin`,
-		`say "hi"`:           `"say \"hi\""`,
-		"":                   `""`,
+		"100%":                  "100%%",
+		`PATH=$HOME/bin`:        `PATH=$$HOME/bin`,
+		`say "hi"`:              `"say \"hi\""`,
+		"":                      `""`,
 	}
 	for in, want := range tests {
 		if got := systemdQuote(in); got != want {

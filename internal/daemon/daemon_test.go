@@ -18,6 +18,7 @@ import (
 	"github.com/xasdta/pilothouse/internal/client"
 	"github.com/xasdta/pilothouse/internal/core"
 	"github.com/xasdta/pilothouse/internal/paths"
+	"github.com/xasdta/pilothouse/internal/policy"
 	"github.com/xasdta/pilothouse/internal/store"
 )
 
@@ -191,17 +192,18 @@ func TestPreToolPolicyAndGrants(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var decisions []api.PolicyDecision
+	var decisions []policy.DecisionEvent
 	for _, ev := range evs {
 		if ev.Type == api.EventPolicyDecision {
-			var pd api.PolicyDecision
-			if err := json.Unmarshal(ev.Data, &pd); err != nil {
+			var de policy.DecisionEvent
+			if err := json.Unmarshal(ev.Data, &de); err != nil {
 				t.Fatal(err)
 			}
-			decisions = append(decisions, pd)
+			decisions = append(decisions, de)
 		}
 	}
-	if len(decisions) != 3 || decisions[0].Rule != "no-rm" || decisions[0].Behavior != api.BehaviorDeny {
+	if len(decisions) != 3 || decisions[0].Rule != "no-rm" || decisions[0].Action != api.BehaviorDeny ||
+		decisions[0].Outcome != api.BehaviorDeny || decisions[0].Tool != "Bash" {
 		t.Fatalf("policy decisions = %+v", decisions)
 	}
 }

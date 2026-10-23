@@ -10,16 +10,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
+
+	"github.com/creack/pty"
 
 	"github.com/xasdta/pilothouse/internal/adapters"
 	"github.com/xasdta/pilothouse/internal/api"
@@ -28,6 +33,7 @@ import (
 	"github.com/xasdta/pilothouse/internal/service"
 	"github.com/xasdta/pilothouse/internal/tui"
 	"github.com/xasdta/pilothouse/internal/version"
+	"github.com/xasdta/pilothouse/internal/wrap"
 )
 
 var ibxT0 = time.Date(2026, 10, 22, 15, 4, 5, 0, time.UTC)
@@ -287,6 +293,17 @@ func ibxEnv(t *testing.T) string {
 		}
 	}
 	{
+		v := inboxHolders
+		save(func() { inboxHolders = v })
+		// The wrapped fixture session has a live holder.
+		inboxHolders = func(context.Context) ([]wrap.HolderInfo, error) {
+			return []wrap.HolderInfo{
+				{ServerHello: wrap.ServerHello{SessionID: "s_k3m9q2xv7a"}},
+				{ServerHello: wrap.ServerHello{SessionID: "s_gone000000", Exited: true}},
+			}, nil
+		}
+	}
+	{
 		v1, v2, v3, v4, v5 := inboxIsTerminal, inboxStdinTerminal, inboxLocation, inboxNow, inboxHealthWait
 		save(func() {
 			inboxIsTerminal, inboxStdinTerminal, inboxLocation, inboxNow, inboxHealthWait = v1, v2, v3, v4, v5
@@ -373,7 +390,7 @@ func ibxEvents() []api.Event {
 		mk(12, api.EventRequestOpened, "s_k3m9q2xv7a", req),
 		mk(13, api.EventSessionUpdated, "s_k3m9q2xv7a", s.Sessions[0]),
 		mk(14, api.EventRequestClosed, "s_k3m9q2xv7a", decided),
-		mk(15, api.EventPolicyDecision, "s_p4t8w6n2rb", map[string]string{"rule": "no-force-push", "behavior": "deny", "summary": "Run: git push -f"}),
+		mk(15, api.EventPolicyDecision, "s_p4t8w6n2rb", map[string]string{"rule": "no-force-push", "action": "deny", "outcome": "deny", "summary": "Run: git push -f"}),
 		mk(16, api.EventSessionExited, "s_z0y9x8w7vu", s.Sessions[3]),
 		mk(17, api.EventPresenceChanged, "", api.Presence{State: api.PresenceAway, Mode: api.PresenceForceAway, Source: "manual"}),
 	}
@@ -412,7 +429,8 @@ func TestInboxLs(t *testing.T) {
 		t.Fatal(err)
 	}
 	ibxContains(t, out, "NEEDS YOU (3)", "r_7hq2m4k9pd", "$ git push origin main", "pilothouse approve|deny r_7hq2",
-		"in its terminal", "SESSIONS", "s_k3m9q2xv7a", "blocked/permission", "[attach] Asked to run git push",
+		"in its terminal", "SESSIONS", "s_k3m9q2xv7a", "blocked/permission", "⏎ s_k3m9q2xv7a", "Asked to run git push",
+		"⏎ attachable: pilothouse attach s_k3m9",
 		"waiting •", "Done. Want me to add pricing?")
 	if strings.Contains(out, "s_z0y9x8w7vu") || strings.Contains(out, "r_done000001") {
 		t.Fatalf("exited sessions/closed requests must be hidden:\n%s", out)
@@ -429,8 +447,15 @@ func TestInboxLs(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatalf("%v\n%s", err, out)
 	}
-	if len(got.Sessions) != 3 || len(got.Requests) != 3 {
-		t.Fatalf("json: %d sessions %d requests", len(got.Sessions), len(got.Requests))
+	if len(got.Sessions) != 3 || len(got.Requests) != 3 || fmt.Sprint(got.Attachable) != "[s_k3m9q2xv7a]" {
+		t.Fatalf("json: %d sessions %d requests attachable %v", len(got.Sessions), len(got.Requests), got.Attachable)
+	}
+
+	// Holder gone (crashed or agent exited): no attach hint.
+	inboxHolders = func(context.Context) ([]wrap.HolderInfo, error) { return nil, nil }
+	out, err = ibxRun(t, "", "ls")
+	if err != nil || strings.Contains(out, "⏎") || strings.Contains(out, "pilothouse attach") {
+		t.Fatalf("dead holder still attachable: %v\n%s", err, out)
 	}
 }
 
@@ -516,7 +541,7 @@ func TestInboxLog(t *testing.T) {
 		"? $ git push origin main — held for your devices",
 		"· blocked (permission): Asked to run git push",
 		"✗ denied by device:d_phone: $ git push origin main — “open a PR”",
-		"⚖ policy rule=no-force-push behavior=deny summary=Run: git push -f",
+		"⚖ policy rule=no-force-push action=deny outcome=deny summary=Run: git push -f",
 		"■ exited with code 0",
 		"-         ◐ presence: away (away, manual)",
 	)
@@ -692,7 +717,9 @@ func (s *ibxService) rec(c string) {
 	s.calls = append(s.calls, c)
 }
 func (s *ibxService) Kind() string { return s.kind }
-func (s *ibxService) Path() string { return "/home/dev/Library/LaunchAgents/dev.pilothouse.daemon.plist" }
+func (s *ibxService) Path() string {
+	return "/home/dev/Library/LaunchAgents/dev.pilothouse.daemon.plist"
+}
 func (s *ibxService) Install(context.Context) (service.Result, error) {
 	s.rec("install")
 	changed := !s.installed
@@ -959,4 +986,123 @@ func TestFormatEventLineFallback(t *testing.T) {
 	if got != `15:04:05  -         device.changed {"id":"d_1"}` {
 		t.Fatalf("got %q", got)
 	}
+}
+
+// ---------------------------------------------------------------- terminal queries
+
+var (
+	ibxBinOnce sync.Once
+	ibxBin     string
+	ibxBinErr  error
+)
+
+// ibxBinary builds cmd/pilothouse once for the PTY regression tests.
+func ibxBinary(t *testing.T) string {
+	t.Helper()
+	ibxBinOnce.Do(func() {
+		dir, err := os.MkdirTemp("", "ph-ibx")
+		if err != nil {
+			ibxBinErr = err
+			return
+		}
+		ibxBin = filepath.Join(dir, "pilothouse")
+		out, err := exec.Command("go", "build", "-o", ibxBin, "github.com/xasdta/pilothouse/cmd/pilothouse").CombinedOutput()
+		if err != nil {
+			ibxBinErr = fmt.Errorf("%v\n%s", err, out)
+		}
+	})
+	if ibxBinErr != nil {
+		t.Fatalf("build: %v", ibxBinErr)
+	}
+	return ibxBin
+}
+
+// TestNoTerminalQueries runs the real binary in a pseudo-terminal that
+// never answers (like a dumb or remote terminal). Only the inbox may ask
+// the terminal anything: a query here would stall every command (termenv
+// waits up to 5 s) and a late reply would leak into the next program's
+// input — fatal for the hook shim, whose stdout is the agent's protocol.
+func TestNoTerminalQueries(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the binary")
+	}
+	bin := ibxBinary(t)
+	// Exec once untimed: macOS verifies a new binary on its first run,
+	// which is not what this test measures.
+	_ = exec.Command(bin, "version").Run()
+	run, err := os.MkdirTemp("/tmp", "ph")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(run)
+	home := t.TempDir()
+	env := append(os.Environ(),
+		"PILOTHOUSE_HOME="+filepath.Join(home, "ph"),
+		"PILOTHOUSE_USER_HOME="+home,
+		"PILOTHOUSE_RUN_DIR="+run, // no daemon listens here
+		"PILOTHOUSE_NO_UPDATE_CHECK=1",
+		"TERM=xterm-256color", "COLORTERM=truecolor",
+	)
+	payload := `{"session_id":"x","hook_event_name":"SessionStart","cwd":"/tmp","source":"startup"}`
+	tests := []struct {
+		name  string
+		args  []string
+		stdin string // "" = the PTY itself is stdin
+	}{
+		{"version", []string{"version"}, ""},
+		{"hook claude", []string{"hook", "claude"}, payload},
+		{"ls (daemon down)", []string{"ls"}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := exec.Command(bin, tt.args...)
+			c.Env = env
+			if tt.stdin != "" {
+				// Agents pipe the payload in; stdout/stderr are still the terminal.
+				c.Stdin = strings.NewReader(tt.stdin)
+			}
+			// The PTY is the controlling terminal even when stdin is a pipe
+			// (Ctty is the child's fd 1), as for a hook run by an agent.
+			attrs := &syscall.SysProcAttr{Setsid: true, Setctty: true, Ctty: 1}
+			start := time.Now()
+			ptmx, err := pty.StartWithAttrs(c, &pty.Winsize{Cols: 100, Rows: 30}, attrs)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer ptmx.Close()
+			var out bytes.Buffer
+			drained := make(chan struct{})
+			go func() { _, _ = io.Copy(&out, ptmx); close(drained) }() // read, never answer
+			done := make(chan error, 1)
+			go func() { done <- c.Wait() }()
+			select {
+			case <-done:
+			case <-time.After(10 * time.Second):
+				_ = c.Process.Kill()
+				t.Fatal("command hung")
+			}
+			elapsed := time.Since(start)
+			ptmx.Close()
+			<-drained
+			if elapsed > 500*time.Millisecond {
+				t.Errorf("took %v in a non-answering terminal (limit 500ms)", elapsed)
+			}
+			if q := ibxQueries(out.Bytes()); q != "" {
+				t.Errorf("queried the terminal: %q\noutput: %q", q, out.String())
+			}
+		})
+	}
+}
+
+// ibxQueries returns the first terminal query sequence in b: OSC colour
+// queries (ESC ] 1x ; ?), cursor position (CSI 6n) or device attributes
+// (CSI c / CSI > c).
+func ibxQueries(b []byte) string {
+	s := string(b)
+	for _, q := range []string{"\x1b]10;?", "\x1b]11;?", "\x1b]12;?", "\x1b[6n", "\x1b[c", "\x1b[>c", "\x1b[0c"} {
+		if strings.Contains(s, q) {
+			return q
+		}
+	}
+	return ""
 }

@@ -265,9 +265,15 @@ confirm (`ask`) any tool call that:
   `open`, `setup`; or
 - **writes to a protected path**: the Pilothouse home (`~/.pilothouse/**`, including
   the database, keys, policy and trust list), the socket directory, each
-  agent's settings files (`~/.claude/settings.json`, `~/.codex/config.toml`,
-  …), and in the current repo `.pilothouse/**`, `.claude/settings.json`,
-  `.claude/settings.local.json` and `.codex/config.toml`.
+  agent's user settings files (`~/.claude/settings.json`,
+  `~/.codex/config.toml`, …), project-level agent settings in **any**
+  directory (`**/.claude/settings.json`, `**/.claude/settings.local.json`,
+  `**/.codex/config.toml`, `**/.codex/hooks.json` — so a sibling repo's
+  settings are covered too), and the current repo's `.pilothouse/**`.
+
+  Protected entries are either literal paths (the path and everything under
+  it) or path-style globs, matched like `path:` globs in a rule (the match
+  and everything under it).
 
 It cannot be turned off, and because ask outranks allow, no allow rule or
 session grant silences it. A deny rule can still make it stricter.

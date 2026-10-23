@@ -706,3 +706,30 @@ func TestBurstKeysAreSplit(t *testing.T) {
 		t.Fatalf("input = %q", m.input.Value())
 	}
 }
+
+func TestParseBackground(t *testing.T) {
+	tests := []struct {
+		in       string
+		dark, ok bool
+	}{
+		{"\x1b]11;rgb:1e1e/1e1e/2e2e\x1b\\\x1b[?62;22c", true, true},
+		{"\x1b]11;rgb:ffff/ffff/ffff\x07", false, true},
+		{"\x1b]11;rgb:fd/f6/e3\x1b\\", false, true}, // solarized light, 8-bit
+		{"\x1b[?1;2c", false, false},                // OSC 11 unsupported
+		{"", false, false},
+	}
+	for _, tt := range tests {
+		dark, ok := parseBackground(tt.in)
+		if dark != tt.dark || ok != tt.ok {
+			t.Errorf("parseBackground(%q) = %v,%v", tt.in, dark, ok)
+		}
+	}
+	t.Setenv("COLORFGBG", "0;15")
+	if darkBackground(os.Stdin, os.Stdout, time.Millisecond) {
+		t.Error("COLORFGBG 0;15 is a light background")
+	}
+	t.Setenv("COLORFGBG", "15;0")
+	if !darkBackground(os.Stdin, os.Stdout, time.Millisecond) {
+		t.Error("COLORFGBG 15;0 is a dark background")
+	}
+}

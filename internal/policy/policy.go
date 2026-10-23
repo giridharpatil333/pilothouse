@@ -97,7 +97,7 @@ func DefaultOptions(extraProtected ...string) Options {
 		UserFile:         paths.Policy(),
 		TrustedReposFile: paths.TrustedRepos(),
 		ProtectedPaths:   prot,
-		PilothouseHome:      paths.Home(),
+		PilothouseHome:   paths.Home(),
 	}
 }
 
@@ -119,19 +119,19 @@ const (
 
 // Engine is safe for concurrent use.
 type Engine struct {
-	opts        Options
-	home        string
+	opts           Options
+	home           string
 	pilothouseHome string
-	protected   []string // folded absolute roots, symlinks resolved too
-	builtin     []*rule
-	user        *slot[[]*rule]
-	trust       *slot[trustSet]
+	protected      *protectedSet // folded absolute roots (symlinks resolved too) and globs
+	builtin        []*rule
+	user           *slot[[]*rule]
+	trust          *slot[trustSet]
 
 	reposMu sync.RWMutex
 	repos   map[string]*repoState
 
 	rootsMu     sync.RWMutex
-	rootsByBase map[string][]string // per-repo protected roots
+	rootsByBase map[string]*protectedSet // per-repo protected sets
 
 	symMu   sync.Mutex
 	symDirs map[string]symEntry // directory → symlink-resolved, short TTL
@@ -151,15 +151,15 @@ type repoState struct {
 // the built-in rules and reports problems in the status.
 func Load(opts Options) (*Engine, api.PolicyStatus) {
 	e := &Engine{
-		opts:        opts,
-		home:        paths.UserHome(),
+		opts:           opts,
+		home:           paths.UserHome(),
 		pilothouseHome: opts.PilothouseHome,
-		repos:       map[string]*repoState{},
-		rootsByBase: map[string][]string{},
-		symDirs:     map[string]symEntry{},
-		clock:       time.Now,
+		repos:          map[string]*repoState{},
+		rootsByBase:    map[string]*protectedSet{},
+		symDirs:        map[string]symEntry{},
+		clock:          time.Now,
 	}
-	e.protected = e.protectedRoots(opts.ProtectedPaths)
+	e.protected = e.protectedSet(opts.ProtectedPaths)
 	e.builtin = []*rule{{
 		name:        SelfProtectionRule,
 		description: "Agents must not administer Pilothouse or edit Pilothouse/agent settings without a person",
@@ -394,7 +394,7 @@ type evalCtx struct {
 	input     map[string]any
 	inputDone bool
 	inputVal  ref.Val
-	roots     []string
+	roots     *protectedSet
 	rootsDone bool
 }
 
@@ -474,7 +474,7 @@ func (c *evalCtx) matchField(fm *fieldMatch) bool {
 // protected paths: the repo's own Pilothouse policy (an agent could delete
 // a deny rule from it) and project-level agent settings (which can grant
 // permissions).
-func (c *evalCtx) protectedRoots() []string {
+func (c *evalCtx) protectedRoots() *protectedSet {
 	if c.rootsDone {
 		return c.roots
 	}
@@ -487,9 +487,9 @@ func (c *evalCtx) protectedRoots() []string {
 	return c.roots
 }
 
-// rootsFor returns the engine-wide protected roots plus base's own
+// rootsFor returns the engine-wide protected set plus base's own
 // settings files, cached per base directory.
-func (e *Engine) rootsFor(base string) []string {
+func (e *Engine) rootsFor(base string) *protectedSet {
 	if base == "" {
 		return e.protected
 	}
@@ -499,7 +499,7 @@ func (e *Engine) rootsFor(base string) []string {
 	if ok {
 		return r
 	}
-	r = append(slices.Clip(e.protected),
+	r = e.protected.withRoots(
 		foldPath(filepath.Join(base, ".pilothouse")),
 		foldPath(filepath.Join(base, ".claude", "settings.json")),
 		foldPath(filepath.Join(base, ".claude", "settings.local.json")),
@@ -516,11 +516,11 @@ func (e *Engine) rootsFor(base string) []string {
 
 func (c *evalCtx) isProtected(p string) bool {
 	roots := c.protectedRoots()
-	if underAny(foldPath(p), roots) {
+	if roots.has(foldPath(p)) {
 		return true
 	}
 	if r, changed := c.eng.resolveSymlinks(p, c.wall); changed {
-		return underAny(foldPath(r), roots)
+		return roots.has(foldPath(r))
 	}
 	return false
 }
@@ -561,16 +561,26 @@ func (e *Engine) resolveSymlinks(p string, now int64) (string, bool) {
 	return out, out != p
 }
 
-func (e *Engine) protectedRoots(in []string) []string {
-	var out []string
+// protectedSet builds the engine-wide protected set. Entries with glob
+// syntax become path-style globs (relative ones match at any depth, as in
+// policy files); the rest are literal roots, also added with symlinks
+// resolved. Invalid globs are skipped: Options come from code, not users.
+func (e *Engine) protectedSet(in []string) *protectedSet {
+	set := &protectedSet{}
 	add := func(p string) {
 		p = foldPath(p)
-		if p != "" && p != "/" && !slices.Contains(out, p) {
-			out = append(out, p)
+		if p != "" && p != "/" && !slices.Contains(set.roots, p) {
+			set.roots = append(set.roots, p)
 		}
 	}
 	for _, p := range in {
 		if p == "" {
+			continue
+		}
+		if hasGlobMeta(p) {
+			if g, err := compileGlob(foldPath(pathPattern(p, e.home)), globPath); err == nil {
+				set.globs = append(set.globs, g)
+			}
 			continue
 		}
 		abs := absPath(p, "", e.home)
@@ -585,7 +595,7 @@ func (e *Engine) protectedRoots(in []string) []string {
 			add(r)
 		}
 	}
-	return out
+	return set
 }
 
 func (e *Engine) repoState(root string, nanos int64) *repoState {

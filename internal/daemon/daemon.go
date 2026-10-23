@@ -269,6 +269,18 @@ func (d *Daemon) shutdown(servers ...*http.Server) {
 		}
 	}
 	d.bg.Wait()
+	closeNotifier(d.notifier)
+}
+
+// closeNotifier flushes queued deliveries. *notify.Notifier has Close();
+// injected notifiers may not.
+func closeNotifier(n core.Notifier) {
+	switch c := n.(type) {
+	case interface{ Close() }:
+		c.Close()
+	case interface{ Close() error }:
+		_ = c.Close()
+	}
 }
 
 // Shutdown begins a graceful stop; Run returns once it completes.
@@ -303,7 +315,8 @@ func (d *Daemon) listenUnix() (*http.Server, net.Listener, error) {
 // initWeb builds the web server. A failure there must not take down the
 // local inbox, so it is logged and the daemon runs without the web app.
 func (d *Daemon) initWeb() {
-	ws, err := web.New(web.Deps{Core: d, DB: d.db.SQL(), Config: d.cfg, Log: d.log.With("component", "web")})
+	ws, err := web.New(web.Deps{Core: d, DB: d.db.SQL(), Config: d.cfg, Log: d.log.With("component", "web"),
+		LocalGuard: d.requireHuman})
 	if err != nil {
 		d.log.Error("web app disabled", "err", err)
 	} else {

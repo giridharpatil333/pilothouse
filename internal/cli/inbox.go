@@ -34,6 +34,7 @@ import (
 	"github.com/xasdta/pilothouse/internal/service"
 	"github.com/xasdta/pilothouse/internal/tui"
 	"github.com/xasdta/pilothouse/internal/version"
+	"github.com/xasdta/pilothouse/internal/wrap"
 )
 
 // serviceManager is what the CLI needs from internal/service; tests swap
@@ -70,6 +71,7 @@ var (
 	inboxStdinTerminal = func() bool { return term.IsTerminal(int(os.Stdin.Fd())) }
 	inboxLocation      = time.Local
 	inboxNow           = time.Now
+	inboxHolders       = wrap.ListHolders
 	inboxHealthWait    = 10 * time.Second
 )
 
@@ -176,6 +178,35 @@ func runInbox(cmd *cobra.Command) error {
 type lsOutput struct {
 	Sessions []api.Session `json:"sessions"`
 	Requests []api.Request `json:"requests"`
+	// Attachable lists sessions whose `pilothouse run` holder answered
+	// just now, i.e. `pilothouse attach <id>` will work.
+	Attachable []string `json:"attachable"`
+}
+
+// liveHolders returns the session ids whose holder is up and whose agent
+// is still running. Only asked when a wrapped session is listed: probing
+// costs a socket round trip per holder.
+func liveHolders(ctx context.Context, sessions []api.Session) map[string]bool {
+	live := map[string]bool{}
+	need := false
+	for _, s := range sessions {
+		if s.Mode == api.ModeWrapped && s.State != api.StateExited {
+			need = true
+		}
+	}
+	if !need {
+		return live
+	}
+	hs, err := inboxHolders(ctx)
+	if err != nil {
+		return live
+	}
+	for _, h := range hs {
+		if !h.Exited {
+			live[h.SessionID] = true
+		}
+	}
+	return live
 }
 
 func newLsCmd() *cobra.Command {
@@ -189,7 +220,7 @@ func newLsCmd() *cobra.Command {
 			if err != nil {
 				return inboxErr(err, "")
 			}
-			out := lsOutput{Sessions: []api.Session{}, Requests: []api.Request{}}
+			out := lsOutput{Sessions: []api.Session{}, Requests: []api.Request{}, Attachable: []string{}}
 			for _, s := range snap.Sessions {
 				if showAll || s.State != api.StateExited {
 					out.Sessions = append(out.Sessions, s)
@@ -202,10 +233,16 @@ func newLsCmd() *cobra.Command {
 			}
 			sort.SliceStable(out.Requests, func(i, j int) bool { return out.Requests[i].CreatedAt.Before(out.Requests[j].CreatedAt) })
 			sort.SliceStable(out.Sessions, func(i, j int) bool { return out.Sessions[i].StartedAt.Before(out.Sessions[j].StartedAt) })
+			live := liveHolders(cmd.Context(), out.Sessions)
+			for _, s := range out.Sessions {
+				if live[s.ID] {
+					out.Attachable = append(out.Attachable, s.ID)
+				}
+			}
 			if asJSON {
 				return inboxJSON(cmd.OutOrStdout(), out)
 			}
-			printLs(cmd.OutOrStdout(), out, snap.Sessions)
+			printLs(cmd.OutOrStdout(), out, snap.Sessions, live)
 			return nil
 		},
 	}
@@ -220,7 +257,7 @@ func inboxJSON(w io.Writer, v any) error {
 	return enc.Encode(v)
 }
 
-func printLs(w io.Writer, out lsOutput, allSessions []api.Session) {
+func printLs(w io.Writer, out lsOutput, allSessions []api.Session, live map[string]bool) {
 	now := inboxNow()
 	byID := map[string]api.Session{}
 	for _, s := range allSessions {
@@ -235,7 +272,7 @@ func printLs(w io.Writer, out lsOutput, allSessions []api.Session) {
 			answer := "pilothouse approve|deny " + inboxShortRef(r.ID)
 			if r.Status == api.RequestSteppedAside {
 				answer = "in its terminal"
-				if s.Mode == api.ModeWrapped {
+				if live[s.ID] {
 					answer = "pilothouse attach " + inboxShortRef(s.ID)
 				}
 			}
@@ -269,12 +306,16 @@ func printLs(w io.Writer, out lsOutput, allSessions []api.Session) {
 			detail = s.LastMessage
 		}
 		detail = inboxClip(oneLineText(detail), 50)
-		if s.Mode == api.ModeWrapped && s.State != api.StateExited {
-			detail = strings.TrimSpace("[attach] " + detail)
+		mark := " "
+		if live[s.ID] {
+			mark = "⏎"
 		}
-		fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\t%s\t%s\n", s.ID, s.Agent, state, inboxWhere(s, ""), tui.Age(now.Sub(since)), detail)
+		fmt.Fprintf(tw, "%s %s\t%s\t%s\t%s\t%s\t%s\n", mark, s.ID, s.Agent, state, inboxWhere(s, ""), tui.Age(now.Sub(since)), detail)
 	}
 	tw.Flush()
+	if len(out.Attachable) > 0 {
+		fmt.Fprintf(w, "\n⏎ attachable: pilothouse attach %s  (detach with ctrl+\\)\n", inboxShortRef(out.Attachable[0]))
+	}
 }
 
 func inboxShortRef(id string) string {
@@ -648,7 +689,9 @@ func describeEvent(ev api.Event) string {
 		var m map[string]any
 		if json.Unmarshal(ev.Data, &m) == nil {
 			parts := []string{"⚖ policy"}
-			for _, k := range []string{"rule", "behavior", "summary", "message"} {
+			// Data is policy.DecisionEvent: action is the rule's verdict,
+			// outcome what the agent was told (a grant can allow with no rule).
+			for _, k := range []string{"rule", "action", "outcome", "grant", "summary", "message"} {
 				if v, ok := m[k].(string); ok && v != "" {
 					parts = append(parts, k+"="+oneLineText(v))
 				}

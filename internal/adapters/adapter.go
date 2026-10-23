@@ -22,16 +22,16 @@ type Proc struct {
 // (POST /v1/hook on the Unix socket). The shim adds process context the
 // agent's own payload lacks.
 type HookEnvelope struct {
-	Agent            api.AgentKind     `json:"agent"`
-	Event            string            `json:"event,omitempty"` // from argv, if the agent passes it there
-	Payload          json.RawMessage   `json:"payload"`         // stdin, verbatim
-	ShimPID          int               `json:"shim_pid"`
-	Ancestors        []Proc            `json:"ancestors"`                    // nearest first, up to 12
+	Agent               api.AgentKind     `json:"agent"`
+	Event               string            `json:"event,omitempty"` // from argv, if the agent passes it there
+	Payload             json.RawMessage   `json:"payload"`         // stdin, verbatim
+	ShimPID             int               `json:"shim_pid"`
+	Ancestors           []Proc            `json:"ancestors"`                       // nearest first, up to 12
 	PilothouseSessionID string            `json:"pilothouse_session_id,omitempty"` // $PILOTHOUSE_SESSION_ID (wrapped sessions)
-	Cwd              string            `json:"cwd"`
-	TTY              string            `json:"tty,omitempty"`
-	Env              map[string]string `json:"env,omitempty"` // allow-listed: TERM_PROGRAM, TMUX, PILOTHOUSE_TASK_ID, ...
-	ReceivedAt       time.Time         `json:"received_at"`
+	Cwd                 string            `json:"cwd"`
+	TTY                 string            `json:"tty,omitempty"`
+	Env                 map[string]string `json:"env,omitempty"` // allow-listed: TERM_PROGRAM, TMUX, PILOTHOUSE_TASK_ID, ...
+	ReceivedAt          time.Time         `json:"received_at"`
 }
 
 // HookKind is a vendor-neutral hook event.

@@ -67,32 +67,6 @@ func TestMatchGrant(t *testing.T) {
 	}
 }
 
-func TestGuardedRoute(t *testing.T) {
-	tests := []struct {
-		method, path string
-		want         bool
-	}{
-		{"POST", "/v1/shutdown", true},
-		{"POST", "/v1/requests/r_abc/decide", true},
-		{"POST", "/v1//requests/r_abc/decide", true},
-		{"PUT", "/v1/presence", true},
-		{"GET", "/v1/presence", false},
-		{"POST", "/v1/policy/reload", true},
-		{"GET", "/v1/policy/status", false},
-		{"POST", "/v1/pair", true},
-		{"POST", "/v1/login-link", true},
-		{"DELETE", "/v1/devices/d_1", true},
-		{"GET", "/v1/devices", false},
-		{"POST", "/v1/hook", false},
-		{"POST", "/v1/sessions/s_1/seen", false},
-	}
-	for _, tt := range tests {
-		if got := guardedRoute(tt.method, tt.path); got != tt.want {
-			t.Errorf("guardedRoute(%s %s) = %v", tt.method, tt.path, got)
-		}
-	}
-}
-
 func TestProcessGuard(t *testing.T) {
 	procs := map[int]adapters.Proc{
 		10: {PID: 10, PPID: 9, Comm: "pilothouse"},

@@ -174,11 +174,19 @@ func New(opts Options) *Model {
 // Run shows the inbox until the user quits or ctx ends.
 func Run(ctx context.Context, opts Options) error {
 	m := New(opts)
-	// Resolve the colour profile and background now: lipgloss asks the
-	// terminal (OSC 11) lazily, and doing that while Bubble Tea reads
-	// stdin would race for the reply and swallow the first keystrokes.
-	m.opts.Renderer.ColorProfile()
-	m.opts.Renderer.HasDarkBackground()
+	// Settle the colour profile (from the environment) and background
+	// (one bounded query) before Bubble Tea starts reading stdin; left to
+	// lipgloss, the query would happen lazily mid-program, race Bubble Tea
+	// for the reply and wait up to 5 s on terminals that never answer.
+	// This is the only place Pilothouse queries the terminal.
+	r := m.opts.Renderer
+	profile := r.ColorProfile()
+	dark := darkBackground(os.Stdin, os.Stdout, queryTimeout)
+	r.SetHasDarkBackground(dark)
+	// Bubbles (the deny prompt) render through lipgloss's default
+	// renderer; give it the same answers so it never asks either.
+	lipgloss.SetColorProfile(profile)
+	lipgloss.SetHasDarkBackground(dark)
 	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithContext(ctx))
 	_, err := p.Run()
 	m.stopStream()

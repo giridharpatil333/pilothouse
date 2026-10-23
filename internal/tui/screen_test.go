@@ -370,3 +370,34 @@ func TestScreen(t *testing.T) {
 		})
 	}
 }
+
+// TestBackgroundQueryPTY checks the inbox's one terminal query against a
+// terminal that answers (light background) and one that never does.
+func TestBackgroundQueryPTY(t *testing.T) {
+	t.Setenv("COLORFGBG", "")
+	for _, answer := range []bool{true, false} {
+		ptmx, tty, err := pty.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		go func() {
+			buf := make([]byte, 64)
+			n, _ := ptmx.Read(buf)
+			if answer && strings.Contains(string(buf[:n]), "\x1b]11;?") {
+				_, _ = ptmx.Write([]byte("\x1b]11;rgb:ffff/ffff/ffff\x1b\\\x1b[?62;22c"))
+			}
+			_, _ = io.Copy(io.Discard, ptmx)
+		}()
+		start := time.Now()
+		dark := darkBackground(tty, tty, queryTimeout)
+		took := time.Since(start)
+		tty.Close()
+		ptmx.Close()
+		if answer && (dark || took > 200*time.Millisecond) {
+			t.Errorf("answering terminal: dark=%v took %v", dark, took)
+		}
+		if !answer && (!dark || took > queryTimeout+200*time.Millisecond) {
+			t.Errorf("silent terminal: dark=%v took %v", dark, took)
+		}
+	}
+}

@@ -97,12 +97,13 @@ var readerWriteFlags = map[string][]string{
 
 // spAnalyzer inspects one tool call for the self-protection rule.
 type spAnalyzer struct {
-	home        string
+	home           string
 	pilothouseHome string
-	roots       []string // protected roots: absolute, cleaned, folded
-	raw         string
-	indirect    bool   // the line feeds text to an interpreter
-	reason      string // first finding, human readable
+	roots          *protectedSet
+	cwd            string // the call's working directory, for the loose scan
+	raw            string
+	indirect       bool   // the line feeds text to an interpreter
+	reason         string // first finding, human readable
 }
 
 const maxShellDepth = 8
@@ -121,7 +122,7 @@ func selfProtection(c *evalCtx) (bool, string) {
 	}
 	a := &spAnalyzer{home: c.home, pilothouseHome: c.eng.pilothouseHome, raw: c.in.Command}
 	if c.in.Command != "" {
-		a.roots = c.protectedRoots()
+		a.roots, a.cwd = c.protectedRoots(), c.cwd
 		a.analyze(c.in.Command, c.cwd, 0)
 		if a.reason == "" && a.indirect {
 			a.looseScan()
@@ -396,6 +397,24 @@ func (a *spAnalyzer) looseScan() {
 			return
 		}
 	}
+	// Glob entries can't be found by substring: resolve every path-like
+	// token of the text and test it ("open('.claude/settings.json','w')").
+	if len(a.roots.globs) == 0 {
+		return
+	}
+	tokens := strings.FieldsFunc(norm, func(r rune) bool {
+		return unicode.IsSpace(r) || strings.ContainsRune(";&|()<>`={},[]+", r)
+	})
+	for _, tok := range tokens {
+		if !strings.ContainsRune(tok, '/') && !strings.HasPrefix(tok, ".") {
+			continue
+		}
+		p := absPath(a.expandVars(tok), a.cwd, a.home)
+		if a.roots.has(foldPath(p)) {
+			a.hit("passes a protected path (%s) to an interpreter", tildePath(p, a.home))
+			return
+		}
+	}
 }
 
 // rootForms spells each protected root the ways a script might: absolute,
@@ -403,7 +422,7 @@ func (a *spAnalyzer) looseScan() {
 func (a *spAnalyzer) rootForms() []string {
 	var out []string
 	home := foldPath(a.home)
-	for _, r := range a.roots {
+	for _, r := range a.roots.roots {
 		out = append(out, r)
 		if home != "" && strings.HasPrefix(r, home+"/") {
 			rel := r[len(home)+1:]
@@ -428,7 +447,7 @@ func (a *spAnalyzer) protectedArg(arg, cwd string) (string, bool) {
 	for _, c := range cands {
 		c = a.expandVars(c)
 		p := absPath(c, cwd, a.home)
-		if underAny(foldPath(p), a.roots) {
+		if a.roots.has(foldPath(p)) {
 			return tildePath(p, a.home), true
 		}
 	}

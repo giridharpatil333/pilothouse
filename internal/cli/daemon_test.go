@@ -2,9 +2,14 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/policy"
 )
 
 func TestRotatingFile(t *testing.T) {
@@ -50,5 +55,25 @@ func TestRotatingFile(t *testing.T) {
 	defer rf.Close()
 	if rf.size == 0 {
 		t.Fatal("size of existing log not picked up")
+	}
+}
+
+// `pilothouse log` renders policy.decision events, whose data is
+// policy.DecisionEvent as the daemon emits it.
+func TestFormatEventLinePolicyDecision(t *testing.T) {
+	de := policy.DecisionEvent{ToolUseID: "tu-1", Tool: "Bash", Summary: "Run: git push -f",
+		Result:  policy.Result{Action: api.BehaviorDeny, Rule: "no-force-push", Message: "Open a PR instead."},
+		Outcome: api.BehaviorDeny}
+	data, _ := json.Marshal(de)
+	line := FormatEventLine(api.Event{Seq: 1, Type: api.EventPolicyDecision, Data: data})
+	for _, want := range []string{"rule=no-force-push", "action=deny", "outcome=deny", "summary=Run: git push -f", "message=Open a PR instead."} {
+		if !strings.Contains(line, want) {
+			t.Errorf("line %q lacks %q", line, want)
+		}
+	}
+	data, _ = json.Marshal(policy.DecisionEvent{Tool: "Bash", Grant: "g_abc", Outcome: api.BehaviorAllow})
+	if line := FormatEventLine(api.Event{Type: api.EventPolicyDecision, Data: data}); !strings.Contains(line, "grant=g_abc") ||
+		!strings.Contains(line, "outcome=allow") {
+		t.Errorf("grant line = %q", line)
 	}
 }

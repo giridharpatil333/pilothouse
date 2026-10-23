@@ -79,7 +79,3 @@ func Main(args []string) int {
 	fmt.Fprintln(os.Stderr, "pilothouse:", err)
 	return 1
 }
-
-func notYet(name string) func(*cobra.Command, []string) error {
-	return func(*cobra.Command, []string) error { return fmt.Errorf("%s: not implemented yet", name) }
-}

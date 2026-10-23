@@ -9,9 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/xasdta/pilothouse/internal/adapters"
@@ -31,11 +29,15 @@ const (
 // connKey stores the request's net.Conn in its context for the peer guard.
 type connKey struct{}
 
-// routes builds the Unix-socket API (BUILD-SPEC §4).
+// routes builds the Unix-socket API (BUILD-SPEC §4). Routes that change
+// who can approve what are wrapped in requireHuman (invariant 5); the web
+// package wraps its local routes (pair, login-link, devices) with the same
+// guard through web.Deps.LocalGuard.
 func (d *Daemon) routes() http.Handler {
 	mux := http.NewServeMux()
+	guarded := func(h http.HandlerFunc) http.Handler { return d.requireHuman(h) }
 	mux.HandleFunc("GET /v1/health", d.handleHealth)
-	mux.HandleFunc("POST /v1/shutdown", d.handleShutdown)
+	mux.Handle("POST /v1/shutdown", guarded(d.handleShutdown))
 	mux.HandleFunc("GET /v1/snapshot", d.handleSnapshot)
 	mux.HandleFunc("GET /v1/events", d.handleEvents)
 	mux.HandleFunc("POST /v1/hook", d.handleHook)
@@ -51,57 +53,38 @@ func (d *Daemon) routes() http.Handler {
 
 	mux.HandleFunc("GET /v1/requests", d.handleRequests)
 	mux.HandleFunc("GET /v1/requests/{id}", d.handleRequest)
-	mux.HandleFunc("POST /v1/requests/{id}/decide", d.handleDecide)
+	mux.Handle("POST /v1/requests/{id}/decide", guarded(d.handleDecide))
 
 	mux.HandleFunc("GET /v1/presence", d.handleGetPresence)
-	mux.HandleFunc("PUT /v1/presence", d.handlePutPresence)
+	mux.Handle("PUT /v1/presence", guarded(d.handlePutPresence))
 
 	mux.HandleFunc("GET /v1/tasks", d.handleTasks)
 	mux.HandleFunc("GET /v1/tasks/{id}", d.handleTask)
 	mux.HandleFunc("POST /v1/tasks", d.handlePutTask)
 
 	mux.HandleFunc("GET /v1/policy/status", d.handlePolicyStatus)
-	mux.HandleFunc("POST /v1/policy/reload", d.handlePolicyReload)
+	mux.Handle("POST /v1/policy/reload", guarded(d.handlePolicyReload))
 	mux.HandleFunc("POST /v1/notify/test", d.handleNotifyTest)
 
 	if d.web != nil {
-		d.web.RegisterLocal(mux) // pair, login-link, devices
+		d.web.RegisterLocal(mux) // guarded by web.Deps.LocalGuard = d.requireHuman
 	}
-	return d.guardAdmin(mux)
+	return mux
 }
 
-// guardedRoute reports whether a route changes who can approve what, and
-// so must not be callable by an agent (BUILD-SPEC invariant 5). Matching
-// here, in front of the mux, also covers the routes the web package adds.
-func guardedRoute(method, p string) bool {
-	p = path.Clean("/" + p)
-	switch method {
-	case http.MethodPost:
-		return p == "/v1/shutdown" || p == "/v1/policy/reload" || p == "/v1/pair" || p == "/v1/login-link" ||
-			(strings.HasPrefix(p, "/v1/requests/") && strings.HasSuffix(p, "/decide"))
-	case http.MethodPut:
-		return p == "/v1/presence"
-	case http.MethodDelete:
-		return strings.HasPrefix(p, "/v1/devices/")
-	}
-	return false
-}
-
-func (d *Daemon) guardAdmin(next http.Handler) http.Handler {
+// requireHuman rejects the call with 403 agent_caller unless the peer
+// process passes the PeerGuard (no agent among it and its ancestors).
+func (d *Daemon) requireHuman(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if guardedRoute(r.Method, r.URL.Path) {
-			c, _ := r.Context().Value(connKey{}).(net.Conn)
-			var err error
-			if c == nil {
-				err = errors.New("cannot identify the calling process")
-			} else {
-				err = d.guard(c)
-			}
-			if err != nil {
-				d.log.Warn("rejected admin call", "method", r.Method, "path", r.URL.Path, "reason", err)
-				writeError(w, http.StatusForbidden, "agent_caller", err.Error())
-				return
-			}
+		c, _ := r.Context().Value(connKey{}).(net.Conn)
+		err := errors.New("cannot identify the calling process")
+		if c != nil {
+			err = d.guard(c)
+		}
+		if err != nil {
+			d.log.Warn("rejected admin call", "method", r.Method, "path", r.URL.Path, "reason", err)
+			writeError(w, http.StatusForbidden, "agent_caller", err.Error())
+			return
 		}
 		next.ServeHTTP(w, r)
 	})
@@ -354,12 +337,9 @@ func (d *Daemon) handlePolicyReload(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (d *Daemon) handleNotifyTest(w http.ResponseWriter, _ *http.Request) {
-	// One local and one remote notification, so every configured channel
-	// (desktop, push, ntfy, webhooks) gets a test.
-	for _, remote := range []bool{false, true} {
-		d.notify(core.Notification{Kind: core.NotifyTest, Title: "Pilothouse test notification",
-			Body: "Notifications from " + d.machine + " work.", Remote: remote})
-	}
+	// Test notifications go to every configured channel; notify supplies
+	// the standard wording.
+	d.notify(core.Notification{Kind: core.NotifyTest, Remote: true})
 	w.WriteHeader(http.StatusNoContent)
 }
 

@@ -109,8 +109,17 @@ func (p *fakePolicy) Changed() bool            { return false }
 
 // recNotifier records notifications.
 type recNotifier struct {
-	mu sync.Mutex
-	ns []core.Notification
+	mu     sync.Mutex
+	ns     []core.Notification
+	closed atomic.Bool
+}
+
+func (n *recNotifier) Close() { n.closed.Store(true) }
+
+func (n *recNotifier) all() []core.Notification {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return append([]core.Notification(nil), n.ns...)
 }
 
 func (n *recNotifier) Notify(_ context.Context, x core.Notification) error {
@@ -249,6 +258,11 @@ func (h *harness) hook(ctx context.Context, tb testing.TB, ev adapters.HookEvent
 }
 
 func (h *harness) hookErr(ctx context.Context, ev adapters.HookEvent) (fakeOutcome, error) {
+	return h.hookEnv(ctx, ev, nil)
+}
+
+// hookEnv is hookErr with the shim's allow-listed environment.
+func (h *harness) hookEnv(ctx context.Context, ev adapters.HookEvent, env map[string]string) (fakeOutcome, error) {
 	if ev.AgentSessionID == "" {
 		ev.AgentSessionID = "vendor-1"
 	}
@@ -257,7 +271,7 @@ func (h *harness) hookErr(ctx context.Context, ev adapters.HookEvent) (fakeOutco
 	}
 	payload, _ := json.Marshal(ev)
 	resp, err := h.c.Hook(ctx, adapters.HookEnvelope{
-		Agent: fakeKind, Payload: payload, ShimPID: 5000, Cwd: ev.Cwd,
+		Agent: fakeKind, Payload: payload, ShimPID: 5000, Cwd: ev.Cwd, Env: env,
 		Ancestors:  []adapters.Proc{{PID: 4300, PPID: 4242, Comm: "sh"}, {PID: 4242, PPID: 1, Comm: "fakeagent"}},
 		ReceivedAt: time.Now(),
 	})

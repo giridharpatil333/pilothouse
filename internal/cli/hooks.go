@@ -320,11 +320,11 @@ func hookTimeout(ad adapters.Adapter, kind adapters.HookKind) time.Duration {
 
 func hookEnvelope(agent api.AgentKind, rest []string, payload []byte) adapters.HookEnvelope {
 	env := adapters.HookEnvelope{
-		Agent:            agent,
-		Payload:          payload,
-		ShimPID:          os.Getpid(),
+		Agent:               agent,
+		Payload:             payload,
+		ShimPID:             os.Getpid(),
 		PilothouseSessionID: os.Getenv("PILOTHOUSE_SESSION_ID"),
-		ReceivedAt:       time.Now().UTC(),
+		ReceivedAt:          time.Now().UTC(),
 	}
 	if len(rest) > 0 {
 		env.Event = rest[0]

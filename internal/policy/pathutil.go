@@ -3,6 +3,7 @@ package policy
 import (
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -69,4 +70,42 @@ func underAny(p string, roots []string) bool {
 		}
 	}
 	return false
+}
+
+// protectedSet is what the self-protection rule guards. Literal entries
+// are roots: the path itself and everything under it. Entries with glob
+// syntax (adapters use "**/.claude/settings.json" for project settings in
+// any repo) are path-style globs; they too cover the matched path and
+// everything under it. Immutable once built, so it is shared freely.
+type protectedSet struct {
+	roots []string // absolute, cleaned, folded
+	globs []*glob  // compiled from folded, absolute-or-"**/" patterns
+}
+
+// has reports whether p (absolute, cleaned, folded) is protected.
+func (s *protectedSet) has(p string) bool {
+	if s == nil {
+		return false
+	}
+	if underAny(p, s.roots) {
+		return true
+	}
+	for _, g := range s.globs {
+		if g.match(p) {
+			return true
+		}
+		// "Under a match": try each ancestor. Globs keep their literal
+		// suffix, so most of these are rejected by one HasSuffix.
+		for i := len(p) - 1; i > 0; i-- {
+			if p[i] == '/' && g.match(p[:i]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// withRoots returns a copy of s with extra literal roots (same form).
+func (s *protectedSet) withRoots(extra ...string) *protectedSet {
+	return &protectedSet{roots: append(slices.Clip(s.roots), extra...), globs: s.globs}
 }

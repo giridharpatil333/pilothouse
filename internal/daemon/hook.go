@@ -44,6 +44,8 @@ type permissionPlan struct {
 	toolUseID string
 	hold      time.Duration
 	wait      <-chan api.Request // nil when routed to the terminal
+	pol       policy.Result      // verdict at the permission checkpoint
+	granted   bool               // a session grant answered it; nobody is asked
 }
 
 // Hook routes one hook call (BUILD-SPEC §5) and returns what the shim must
@@ -101,6 +103,11 @@ func (d *Daemon) routeHook(ctx context.Context, ad adapters.Adapter, env adapter
 		}
 		before := s
 		applyHook(&s, h, tx.Now())
+		// A task may be registered before its session exists (`task new`
+		// calls PutTask first); link it as soon as either side shows up.
+		if err := linkTask(ctx, tx, s.TaskID, s.ID); err != nil {
+			return err
+		}
 		if _, err := tx.Emit(ctx, api.EventHook, s.ID, "", loggedEvent(ev)); err != nil {
 			return err
 		}
@@ -122,11 +129,19 @@ func (d *Daemon) routeHook(ctx context.Context, ad adapters.Adapter, env adapter
 
 	switch ev.Kind {
 	case adapters.HookPermission:
-		outcome = d.holdPermission(ctx, plan, sess)
+		if plan.granted {
+			if plan.wait != nil {
+				d.waiters.remove(plan.req.ID)
+			}
+			d.log.Info("permission allowed by session grant", "request", plan.req.ID, "by", plan.req.Decision.By)
+			outcome = adapters.HookOutcome{Behavior: api.BehaviorAllow, Message: decisionMessage(plan.req.Decision)}
+		} else {
+			outcome = d.holdPermission(ctx, plan, sess)
+		}
 	case adapters.HookStop:
 		if d.Presence().State == api.PresenceAway {
-			d.notify(core.Notification{Kind: core.NotifyWaiting, Title: sess.Title + " is waiting for you",
-				Body: firstNonEmpty(sess.LastMessage, "Finished its turn"), Session: &sess, Remote: true})
+			// Empty Title/Body: notify renders the standard wording.
+			d.notify(core.Notification{Kind: core.NotifyWaiting, Session: &sess, Remote: true})
 		}
 	}
 	return ad.EncodeResponse(ev, outcome), nil
@@ -140,6 +155,16 @@ func (d *Daemon) applyHookEffects(ctx context.Context, tx *store.Tx, s api.Sessi
 		return d.decidePreTool(ctx, tx, s, ev, pol)
 	case adapters.HookPermission:
 		plan.req.SessionID = s.ID
+		if err := d.grantPermission(ctx, tx, plan); err != nil {
+			return adapters.HookOutcome{}, err
+		}
+		if plan.granted {
+			if err := tx.InsertRequest(ctx, plan.req, plan.toolUseID); err != nil {
+				return adapters.HookOutcome{}, err
+			}
+			_, err := tx.Emit(ctx, api.EventRequestClosed, s.ID, plan.req.ID, plan.req)
+			return adapters.HookOutcome{}, err
+		}
 		if err := tx.InsertRequest(ctx, plan.req, plan.toolUseID); err != nil {
 			return adapters.HookOutcome{}, err
 		}
@@ -173,12 +198,11 @@ func (d *Daemon) applyHookEffects(ctx context.Context, tx *store.Tx, s api.Sessi
 
 // decidePreTool combines policy and grants: deny > ask > grant allow >
 // policy allow > no opinion. Grants are applied after deny/ask rules so a
-// deny rule always wins over "allow for this session".
+// deny rule always wins over "allow for this session". When a rule or grant
+// decided, a policy.decision event (policy.DecisionEvent, which `policy
+// replay` pairs with the hook by tool_use_id) records it.
 func (d *Daemon) decidePreTool(ctx context.Context, tx *store.Tx, s api.Session, ev adapters.HookEvent, pol policy.Result) (adapters.HookOutcome, error) {
-	pd := api.PolicyDecision{Tool: ev.Tool, Summary: ev.Summary, Rule: pol.Rule, File: pol.File, Message: pol.Message}
-	for _, m := range pol.Matched {
-		pd.Matched = append(pd.Matched, m.Rule+" ("+string(m.Action)+")")
-	}
+	de := policy.DecisionEvent{ToolUseID: ev.ToolUseID, Tool: ev.Tool, Summary: ev.Summary, Result: pol}
 	var out adapters.HookOutcome
 	switch pol.Action {
 	case api.BehaviorDeny:
@@ -193,7 +217,7 @@ func (d *Daemon) decidePreTool(ctx context.Context, tx *store.Tx, s api.Session,
 		}
 		if g, ok := matchGrant(grants, ev.Tool, ev.ToolKind, ev.Command); ok {
 			out = adapters.HookOutcome{Behavior: api.BehaviorAllow, Message: "Allowed for this session in Pilothouse."}
-			pd.Rule, pd.File, pd.Message, pd.GrantID = "", "", out.Message, g.ID
+			de.Grant = g.ID
 		} else if pol.Action == api.BehaviorAllow {
 			out = adapters.HookOutcome{Behavior: api.BehaviorAllow, Message: pol.Message}
 		}
@@ -201,9 +225,36 @@ func (d *Daemon) decidePreTool(ctx context.Context, tx *store.Tx, s api.Session,
 	if out.Behavior == "" {
 		return out, nil
 	}
-	pd.Behavior = out.Behavior
-	_, err := tx.Emit(ctx, api.EventPolicyDecision, s.ID, "", pd)
+	de.Outcome = out.Behavior
+	_, err := tx.Emit(ctx, api.EventPolicyDecision, s.ID, "", de)
 	return out, err
+}
+
+// grantPermission answers a permission request from a session grant, when
+// one covers the call and policy didn't say deny or ask at this checkpoint.
+// This matters most for Codex, whose PreToolUse hook ignores "allow": there
+// the permission checkpoint is the only place a grant can take effect.
+// Policy "allow" is deliberately not applied here: a call that reached the
+// permission checkpoint after an "ask" (which Codex can't express at
+// pre_tool) must still reach a person.
+func (d *Daemon) grantPermission(ctx context.Context, tx *store.Tx, p *permissionPlan) error {
+	if p.pol.Action == api.BehaviorDeny || p.pol.Action == api.BehaviorAsk {
+		return nil
+	}
+	grants, err := tx.Grants(ctx, p.req.SessionID)
+	if err != nil {
+		return err
+	}
+	g, ok := matchGrant(grants, p.req.Tool, p.req.ToolKind, p.req.Command)
+	if !ok {
+		return nil
+	}
+	now := tx.Now()
+	p.granted = true
+	p.req.Status, p.req.Route, p.req.ClosedAt = api.RequestDecided, "", &now
+	p.req.Decision = &api.Decision{RequestID: p.req.ID, Behavior: api.BehaviorAllow, Scope: api.ScopeOnce,
+		Message: "Allowed for this session in Pilothouse.", By: "grant:" + g.ID, At: now}
+	return nil
 }
 
 // planPermission builds the request for a permission hook and picks its
@@ -216,7 +267,7 @@ func (d *Daemon) planPermission(h *hookCall, pol policy.Result) *permissionPlan 
 		hold = max
 	}
 	ev := h.ev
-	p := &permissionPlan{toolUseID: ev.ToolUseID, hold: hold}
+	p := &permissionPlan{toolUseID: ev.ToolUseID, hold: hold, pol: pol}
 	p.req = api.Request{
 		ID: newID("r_"), Agent: h.env.Agent, Checkpoint: api.CheckpointPermission,
 		Tool: ev.Tool, ToolKind: ev.ToolKind, Command: ev.Command, Paths: ev.Paths, Input: ev.Input,
@@ -247,8 +298,7 @@ func (d *Daemon) holdPermission(ctx context.Context, p *permissionPlan, sess api
 		return adapters.HookOutcome{}
 	}
 	defer d.waiters.remove(req.ID)
-	d.notify(core.Notification{Kind: core.NotifyRequest, Title: sess.Title + " needs permission",
-		Body: req.Summary, Request: &req, Session: &sess, Remote: true})
+	d.notify(core.Notification{Kind: core.NotifyRequest, Request: &req, Session: &sess, Remote: true})
 
 	timer := time.NewTimer(p.hold)
 	defer timer.Stop()
@@ -271,8 +321,8 @@ func (d *Daemon) holdPermission(ctx context.Context, p *permissionPlan, sess api
 			return adapters.HookOutcome{Behavior: dec.Behavior, Message: decisionMessage(dec)}
 		}
 	case api.RequestExpired:
-		d.notify(core.Notification{Kind: core.NotifyBlocked, Title: sess.Title + ": answer in the terminal",
-			Body: "No answer in time for: " + final.Summary, Request: &final, Session: &sess, Remote: true})
+		// The person is still away: tell their devices to use the terminal.
+		d.notify(core.Notification{Kind: core.NotifyBlocked, Request: &final, Session: &sess, Remote: true})
 	}
 	return adapters.HookOutcome{}
 }
@@ -321,8 +371,7 @@ func (d *Daemon) scheduleBlockedNotice(req api.Request, sess api.Session) {
 		if err != nil || r.Status != api.RequestSteppedAside {
 			return
 		}
-		d.notify(core.Notification{Kind: core.NotifyBlocked, Title: sess.Title + " is waiting for permission",
-			Body: r.Summary, Request: &r, Session: &sess, Remote: false})
+		d.notify(core.Notification{Kind: core.NotifyBlocked, Request: &r, Session: &sess, Remote: false})
 	})
 }
 

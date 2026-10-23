@@ -59,3 +59,7 @@ require (
 	modernc.org/memory v1.12.1 // indirect
 	rsc.io/qr v0.2.0 // indirect
 )
+
+// Bubble Tea v1 queries the terminal from init() in every binary that
+// links it; the fork drops that (see third_party/bubbletea/pilothouse_fork.go).
+replace github.com/charmbracelet/bubbletea => ./third_party/bubbletea

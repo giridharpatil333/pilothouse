@@ -242,7 +242,7 @@ func TestShellQuoteAndProgram(t *testing.T) {
 		"/usr/local/bin/pilothouse": "/usr/local/bin/pilothouse",
 		"/Users/a b/pilothouse":     "'/Users/a b/pilothouse'",
 		"/it's/pilothouse":          `'/it'\''s/pilothouse'`,
-		"":                       "''",
+		"":                          "''",
 	} {
 		q := ShellQuote(in)
 		if q != want {

@@ -104,7 +104,7 @@ func TestSelfProtectionShell(t *testing.T) {
 		{"tee -a ~/.codex/config.toml", true},
 		{"cp /tmp/x ~/.pilothouse/trusted-repos.yaml", true},
 		{"mv x .claude/settings.local.json", true}, // relative to the repo (cwd)
-		{"rm .pilothouse/policy.yaml", true},          // the repo's own policy
+		{"rm .pilothouse/policy.yaml", true},       // the repo's own policy
 		{"cd ~/.pilothouse && rm policy.yaml", true},
 		{"cd && rm -rf .pilothouse", true},
 		{`rm -rf "$PILOTHOUSE_HOME"`, true},
@@ -272,6 +272,101 @@ func BenchmarkSelfProtectionShell(b *testing.B) {
 	te := newTestEnv(b)
 	e, _ := te.load(b)
 	in := shell(`cd /Users/me/src/app && git add -A && git commit -m "fix: handle empty input" && git push origin feature/x 2>&1 | tail -5`)
+	b.ReportAllocs()
+	for b.Loop() {
+		e.Evaluate(in)
+	}
+}
+
+// Adapters protect project settings in every repo with "**/" globs.
+func TestSelfProtectionGlobEntries(t *testing.T) {
+	te := newTestEnv(t)
+	opts := DefaultOptions(
+		filepath.Join(te.home, ".claude", "settings.json"),
+		"**/.claude/settings.json", "**/.claude/settings.local.json",
+		"**/.codex/config.toml", "**/.codex/hooks.json",
+		"~/.secrets-dir/**/*.key", // a home-anchored glob
+		"**/.guarded",             // covers everything beneath it too
+	)
+	e, _ := Load(opts)
+	cwd := "/work/repo"
+	edit := func(p string) Input {
+		return Input{Agent: api.AgentClaude, Tool: "Write", ToolKind: api.ToolEdit, Paths: []string{p}, Cwd: cwd, Repo: cwd}
+	}
+	sh := func(cmd string) Input {
+		in := shell(cmd)
+		in.Cwd, in.Repo = cwd, cwd
+		return in
+	}
+	tests := []struct {
+		name string
+		in   Input
+		want bool
+	}{
+		{"other repo local settings", edit("/work/other/.claude/settings.local.json"), true},
+		{"other repo settings", edit("/work/other/.claude/settings.json"), true},
+		{"relative into sibling repo", edit("../other/.claude/settings.local.json"), true},
+		{"codex hooks anywhere", edit("/x/y/.codex/hooks.json"), true},
+		{"home-anchored glob", edit("~/.secrets-dir/a/b/server.key"), true},
+		{"under a glob match", edit("/a/b/.guarded/deep/file"), true},
+		{"glob match itself", edit("/a/b/.guarded"), true},
+		{"plain settings.json", edit("/work/repo/src/settings.json"), false},
+		{"claude dir other file", edit("/work/other/.claude/commands/x.md"), false},
+		{"lookalike suffix", edit("/work/other/x.claude/settings.json"), false},
+		{"home-anchored glob elsewhere", edit("/tmp/.secrets-dir/a/server.key"), false},
+		{"guarded lookalike", edit("/a/.guardedx/f"), false},
+		{"redirect", sh("echo x > /work/other/.claude/settings.json"), true},
+		{"sed -i relative", sh("sed -i s/a/b/ ../other/.claude/settings.local.json"), true},
+		{"tee", sh("tee /w/.codex/hooks.json < x"), true},
+		{"cp", sh("cp /tmp/x /w/.claude/settings.json"), true},
+		{"mv", sh("mv x ../other/.codex/config.toml"), true},
+		{"cd then write", sh("cd /work/other/.claude && echo {} > settings.local.json"), true},
+		{"interpreter relative", sh(`python3 -c "open('../other/.claude/settings.local.json','w')"`), true},
+		{"interpreter absolute", sh(`node -e "fs.writeFileSync('/w/.codex/hooks.json','')"`), true},
+		{"interpreter unrelated", sh(`python3 -c "open('src/settings.json','w')"`), false},
+		{"reader", sh("cat /w/.claude/settings.json"), false},
+		{"write unrelated settings", sh("echo {} > src/settings.json"), false},
+	}
+	for _, tt := range tests {
+		r := e.Evaluate(tt.in)
+		if got := r.Rule == SelfProtectionRule; got != tt.want {
+			t.Errorf("%s: protected=%v, want %v (%s)", tt.name, got, tt.want, r.Message)
+		}
+	}
+	if runtime.GOOS == "darwin" {
+		if r := e.Evaluate(edit("/work/other/.CLAUDE/Settings.json")); r.Rule != SelfProtectionRule {
+			t.Error("case-insensitive filesystem: glob entries must match case-insensitively")
+		}
+	}
+}
+
+func TestProtectedSetHas(t *testing.T) {
+	g, _ := compileGlob("**/.claude/settings.json", globPath)
+	s := &protectedSet{roots: []string{"/home/u/.pilothouse"}, globs: []*glob{g}}
+	for p, want := range map[string]bool{
+		"/home/u/.pilothouse":             true,
+		"/home/u/.pilothouse/policy.yaml": true,
+		"/home/u/.pilothousex":            false,
+		"/r/.claude/settings.json":        true,
+		"/r/.claude/settings.json/x":      true,
+		"/r/.claude/settings.jsonx":       false,
+		"/r/src/settings.json":            false,
+		"/":                               false,
+	} {
+		if got := s.has(p); got != want {
+			t.Errorf("has(%q) = %v, want %v", p, got, want)
+		}
+	}
+	var nilSet *protectedSet
+	if nilSet.has("/x") {
+		t.Error("nil set protects nothing")
+	}
+}
+
+func BenchmarkSelfProtectionEditGlobs(b *testing.B) {
+	te := newTestEnv(b)
+	e, _ := Load(DefaultOptions("**/.claude/settings.json", "**/.claude/settings.local.json", "**/.codex/config.toml", "**/.codex/hooks.json"))
+	in := Input{Tool: "Edit", ToolKind: api.ToolEdit, Paths: []string{te.repo + "/internal/server/handlers/user_profile.go"}, Cwd: te.repo, Repo: te.repo}
 	b.ReportAllocs()
 	for b.Loop() {
 		e.Evaluate(in)
