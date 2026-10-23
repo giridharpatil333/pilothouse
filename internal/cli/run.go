@@ -17,11 +17,11 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/paths"
-	"github.com/xasdta/askgate/internal/task"
-	"github.com/xasdta/askgate/internal/wrap"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/paths"
+	"github.com/xasdta/pilothouse/internal/task"
+	"github.com/xasdta/pilothouse/internal/wrap"
 )
 
 // Workstream D: `run`, `attach`, hidden `__holder`, and `task …`.
@@ -34,15 +34,15 @@ func newRunCmd() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "run [-n name] [-d] [--] <cmd> [args…]",
-		Short: "Run an agent under Askgate so you can detach, reattach and approve from anywhere",
+		Short: "Run an agent under Pilothouse so you can detach, reattach and approve from anywhere",
 		Long: `Run starts the command in a background holder that owns its terminal and
 attaches this terminal to it. Detach with ctrl+\ (press it twice to send a
 literal ctrl+\ to the agent); the agent keeps running when the terminal or
-the daemon goes away. Reattach with ` + "`askgate attach <id>`" + `.
+the daemon goes away. Reattach with ` + "`pilothouse attach <id>`" + `.
 
 The agent kind is picked from the command name: claude, codex, or generic.`,
-		Example: `  askgate run claude
-  askgate run -n fix-login -d -- codex "fix the login bug"`,
+		Example: `  pilothouse run claude
+  pilothouse run -n fix-login -d -- codex "fix the login bug"`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			exe, err := exec.LookPath(args[0])
@@ -59,7 +59,7 @@ The agent kind is picked from the command name: claude, codex, or generic.`,
 			}
 			if detach {
 				fmt.Fprintln(cmd.OutOrStdout(), sid)
-				fmt.Fprintf(cmd.ErrOrStderr(), "started %s in the background — attach: askgate attach %s\n", displayName(name, args[0]), sid)
+				fmt.Fprintf(cmd.ErrOrStderr(), "started %s in the background — attach: pilothouse attach %s\n", displayName(name, args[0]), sid)
 				return nil
 			}
 			return attachTerminal(cmd.Context(), cmd.ErrOrStderr(), paths.HolderSocket(sid), replay)
@@ -84,7 +84,7 @@ func newAttachCmd() *cobra.Command {
 	var replay bool
 	cmd := &cobra.Command{
 		Use:   "attach [--replay] <session>",
-		Short: "Attach this terminal to a session started with `askgate run`",
+		Short: "Attach this terminal to a session started with `pilothouse run`",
 		Long: `Attach connects this terminal to a wrapped session, detaching any other
 terminal attached to it. <session> is a session id or a unique prefix of
 one (with or without "s_"), or a session name. Detach with ctrl+\.`,
@@ -122,7 +122,7 @@ func attachTerminal(ctx context.Context, stderr io.Writer, sock string, replay b
 		fmt.Fprintln(stderr, "\r\n"+wrap.DetachMessage(res))
 		return nil
 	default:
-		return fmt.Errorf("lost the connection to %s (%s): %s — reattach: askgate attach %s",
+		return fmt.Errorf("lost the connection to %s (%s): %s — reattach: pilothouse attach %s",
 			res.Name, res.SessionID, res.Reason, res.SessionID)
 	}
 }
@@ -136,7 +136,7 @@ func resolveHolder(ctx context.Context, ref string) (string, error) {
 	cancel()
 	if err == nil {
 		if s.Mode != api.ModeWrapped {
-			return "", fmt.Errorf("session %s was not started with `askgate run`, so it can't be attached — switch to the terminal it runs in", s.ID)
+			return "", fmt.Errorf("session %s was not started with `pilothouse run`, so it can't be attached — switch to the terminal it runs in", s.ID)
 		}
 		sock := s.HolderSock
 		if sock == "" {
@@ -167,7 +167,7 @@ func resolveHolder(ctx context.Context, ref string) (string, error) {
 	case 1:
 		return matches[0].Socket, nil
 	case 0:
-		return "", fmt.Errorf("no running session matches %q — list sessions with `askgate ls`", ref)
+		return "", fmt.Errorf("no running session matches %q — list sessions with `pilothouse ls`", ref)
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "%q matches %d sessions; use more of the id:", ref, len(matches))
@@ -209,7 +209,7 @@ func newHolderCmd() *cobra.Command {
 			}
 			defer logf.Close()
 			level := slog.LevelInfo
-			if os.Getenv("ASKGATE_DEBUG") != "" {
+			if os.Getenv("PILOTHOUSE_DEBUG") != "" {
 				level = slog.LevelDebug
 			}
 			log := slog.New(slog.NewTextHandler(logf, &slog.HandlerOptions{Level: level}))
@@ -251,9 +251,9 @@ func newTaskCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "task",
 		Short: "Run a prompt in its own git worktree and branch, then review and ship it",
-		Long: `Tasks give each agent run its own git worktree (under ~/.askgate/worktrees)
-and branch (askgate/<slug>), so several agents can work on one repo without
-touching your checkout. Tasks are recorded in ~/.askgate/tasks.json and
+		Long: `Tasks give each agent run its own git worktree (under ~/.pilothouse/worktrees)
+and branch (pilothouse/<slug>), so several agents can work on one repo without
+touching your checkout. Tasks are recorded in ~/.pilothouse/tasks.json and
 mirrored to the daemon when it is running.`,
 		Args: cobra.NoArgs,
 	}
@@ -273,8 +273,8 @@ func newTaskNewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   `new [--agent claude|codex] [--base ref] [--name slug] [-a] "<prompt>"`,
 		Short: "Start an agent on a prompt in a new worktree",
-		Example: `  askgate task new "add a --json flag to the export command"
-  askgate task new --agent codex --base main -a "fix the flaky login test"`,
+		Example: `  pilothouse task new "add a --json flag to the export command"
+  pilothouse task new --agent codex --base main -a "fix the flaky login test"`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cwd, err := os.Getwd()
@@ -293,7 +293,7 @@ func newTaskNewCmd() *cobra.Command {
 			fmt.Fprintf(out, "task %s (%s) started\n  worktree: %s\n  branch:   %s (from %s)\n  session:  %s\n",
 				t.ID, t.Title, t.Worktree, t.Branch, t.BaseRef, t.SessionID)
 			if !attach {
-				fmt.Fprintf(out, "attach: askgate attach %s · review: askgate task diff %s\n", t.SessionID, t.ID)
+				fmt.Fprintf(out, "attach: pilothouse attach %s · review: pilothouse task diff %s\n", t.SessionID, t.ID)
 				return nil
 			}
 			return attachTerminal(cmd.Context(), cmd.ErrOrStderr(), paths.HolderSocket(t.SessionID), true)
@@ -339,9 +339,9 @@ func newTaskLsCmd() *cobra.Command {
 			}
 			if shown == 0 {
 				if all {
-					fmt.Fprintln(out, `no tasks yet — start one with: askgate task new "<prompt>"`)
+					fmt.Fprintln(out, `no tasks yet — start one with: pilothouse task new "<prompt>"`)
 				} else {
-					fmt.Fprintln(out, `no open tasks (askgate task ls --all shows finished ones) — start one with: askgate task new "<prompt>"`)
+					fmt.Fprintln(out, `no open tasks (pilothouse task ls --all shows finished ones) — start one with: pilothouse task new "<prompt>"`)
 				}
 				return nil
 			}
@@ -419,7 +419,7 @@ func newTaskAbandonCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&o.KeepBranch, "keep-branch", false, "keep the askgate/<slug> branch")
+	cmd.Flags().BoolVar(&o.KeepBranch, "keep-branch", false, "keep the pilothouse/<slug> branch")
 	cmd.Flags().BoolVar(&o.Force, "force", false, "abandon even while the agent is still running")
 	return cmd
 }

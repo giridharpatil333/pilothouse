@@ -36,9 +36,9 @@ func (f *fakeRunner) run(_ context.Context, name string, args ...string) ([]byte
 func setupHome(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
-	t.Setenv("ASKGATE_USER_HOME", home)
-	t.Setenv("ASKGATE_HOME", filepath.Join(home, ".askgate"))
-	t.Setenv("ASKGATE_RUN_DIR", "/tmp/agtest-run")
+	t.Setenv("PILOTHOUSE_USER_HOME", home)
+	t.Setenv("PILOTHOUSE_HOME", filepath.Join(home, ".pilothouse"))
+	t.Setenv("PILOTHOUSE_RUN_DIR", "/tmp/agtest-run")
 	return home
 }
 
@@ -46,17 +46,17 @@ func setupHome(t *testing.T) string {
 // stable. Only for tests that render without writing.
 func setupFixedHome(t *testing.T) {
 	t.Helper()
-	t.Setenv("ASKGATE_USER_HOME", "/nonexistent/home")
-	t.Setenv("ASKGATE_HOME", "/opt/askgate-test/home")
+	t.Setenv("PILOTHOUSE_USER_HOME", "/nonexistent/home")
+	t.Setenv("PILOTHOUSE_HOME", "/opt/pilothouse-test/home")
 }
 
 func newTestManager(goos string, f *fakeRunner) *Manager {
 	return &Manager{
 		GOOS: goos,
-		Exe:  "/usr/local/bin/askgate",
+		Exe:  "/usr/local/bin/pilothouse",
 		UID:  501,
 		Run:  f.run,
-		Env:  map[string]string{"ASKGATE_HOME": "/opt/askgate-test/home", "PATH": "/opt/homebrew/bin:/usr/bin:/bin"},
+		Env:  map[string]string{"PILOTHOUSE_HOME": "/opt/pilothouse-test/home", "PATH": "/opt/homebrew/bin:/usr/bin:/bin"},
 	}
 }
 
@@ -96,7 +96,7 @@ func TestRenderGolden(t *testing.T) {
 func TestRenderRejectsRelativeExe(t *testing.T) {
 	setupHome(t)
 	m := newTestManager("darwin", &fakeRunner{})
-	m.Exe = "askgate"
+	m.Exe = "pilothouse"
 	if _, err := m.Render(); err == nil {
 		t.Fatal("want error for relative exe")
 	}
@@ -109,8 +109,8 @@ func TestRenderRejectsRelativeExe(t *testing.T) {
 
 func TestQuoting(t *testing.T) {
 	tests := map[string]string{
-		"/usr/bin/askgate":   "/usr/bin/askgate",
-		"/Users/a b/askgate": `"/Users/a b/askgate"`,
+		"/usr/bin/pilothouse":   "/usr/bin/pilothouse",
+		"/Users/a b/pilothouse": `"/Users/a b/pilothouse"`,
 		"100%":               "100%%",
 		`PATH=$HOME/bin`:     `PATH=$$HOME/bin`,
 		`say "hi"`:           `"say \"hi\""`,
@@ -128,10 +128,10 @@ func TestQuoting(t *testing.T) {
 
 func TestPathsUseUserHome(t *testing.T) {
 	home := setupHome(t)
-	if p := newTestManager("darwin", &fakeRunner{}).Path(); p != filepath.Join(home, "Library/LaunchAgents/dev.askgate.daemon.plist") {
+	if p := newTestManager("darwin", &fakeRunner{}).Path(); p != filepath.Join(home, "Library/LaunchAgents/dev.pilothouse.daemon.plist") {
 		t.Fatalf("darwin path %s", p)
 	}
-	if p := newTestManager("linux", &fakeRunner{}).Path(); p != filepath.Join(home, ".config/systemd/user/askgate.service") {
+	if p := newTestManager("linux", &fakeRunner{}).Path(); p != filepath.Join(home, ".config/systemd/user/pilothouse.service") {
 		t.Fatalf("linux path %s", p)
 	}
 }
@@ -164,7 +164,7 @@ func TestLaunchdLifecycle(t *testing.T) {
 	if !res.Changed {
 		t.Fatal("first install must write the plist")
 	}
-	wantCalls(t, f, "launchctl print gui/501/dev.askgate.daemon", "launchctl bootstrap gui/501 "+m.Path())
+	wantCalls(t, f, "launchctl print gui/501/dev.pilothouse.daemon", "launchctl bootstrap gui/501 "+m.Path())
 	if fi, err := os.Stat(m.Path()); err != nil || fi.Mode().Perm() != 0o644 {
 		t.Fatalf("plist: %v %v", fi, err)
 	}
@@ -174,14 +174,14 @@ func TestLaunchdLifecycle(t *testing.T) {
 	if err != nil || res.Changed {
 		t.Fatalf("idempotent install: %+v %v", res, err)
 	}
-	wantCalls(t, f, "launchctl print gui/501/dev.askgate.daemon")
+	wantCalls(t, f, "launchctl print gui/501/dev.pilothouse.daemon")
 
 	// Changed binary path → bootout + bootstrap.
-	m.Exe = "/opt/homebrew/bin/askgate"
+	m.Exe = "/opt/homebrew/bin/pilothouse"
 	if _, err := m.Install(ctx); err != nil {
 		t.Fatal(err)
 	}
-	wantCalls(t, f, "launchctl print gui/501/dev.askgate.daemon", "launchctl bootout gui/501/dev.askgate.daemon", "launchctl bootstrap gui/501 "+m.Path())
+	wantCalls(t, f, "launchctl print gui/501/dev.pilothouse.daemon", "launchctl bootout gui/501/dev.pilothouse.daemon", "launchctl bootstrap gui/501 "+m.Path())
 
 	st, err := m.Status(ctx)
 	if err != nil {
@@ -195,19 +195,19 @@ func TestLaunchdLifecycle(t *testing.T) {
 	if err := m.Restart(ctx); err != nil {
 		t.Fatal(err)
 	}
-	wantCalls(t, f, "launchctl print gui/501/dev.askgate.daemon", "launchctl kickstart -k gui/501/dev.askgate.daemon")
+	wantCalls(t, f, "launchctl print gui/501/dev.pilothouse.daemon", "launchctl kickstart -k gui/501/dev.pilothouse.daemon")
 	if err := m.Stop(ctx); err != nil {
 		t.Fatal(err)
 	}
-	wantCalls(t, f, "launchctl print gui/501/dev.askgate.daemon", "launchctl bootout gui/501/dev.askgate.daemon")
+	wantCalls(t, f, "launchctl print gui/501/dev.pilothouse.daemon", "launchctl bootout gui/501/dev.pilothouse.daemon")
 	if err := m.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
-	wantCalls(t, f, "launchctl print gui/501/dev.askgate.daemon", "launchctl bootstrap gui/501 "+m.Path())
+	wantCalls(t, f, "launchctl print gui/501/dev.pilothouse.daemon", "launchctl bootstrap gui/501 "+m.Path())
 	if err := m.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
-	wantCalls(t, f, "launchctl print gui/501/dev.askgate.daemon", "launchctl kickstart gui/501/dev.askgate.daemon")
+	wantCalls(t, f, "launchctl print gui/501/dev.pilothouse.daemon", "launchctl kickstart gui/501/dev.pilothouse.daemon")
 
 	res, err = m.Uninstall(ctx)
 	if err != nil || !res.Changed {
@@ -248,15 +248,15 @@ func TestSystemdLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantCalls(t, f, "systemctl --user daemon-reload", "systemctl --user enable askgate.service",
-		"systemctl --user restart askgate.service", "loginctl show-user dev --property=Linger")
+	wantCalls(t, f, "systemctl --user daemon-reload", "systemctl --user enable pilothouse.service",
+		"systemctl --user restart pilothouse.service", "loginctl show-user dev --property=Linger")
 	if len(res.Notes) != 1 || !strings.Contains(res.Notes[0], "enable-linger") {
 		t.Fatalf("notes = %v", res.Notes)
 	}
 	if _, err := m.Install(ctx); err != nil {
 		t.Fatal(err)
 	}
-	wantCalls(t, f, "systemctl --user daemon-reload", "systemctl --user enable --now askgate.service", "loginctl show-user dev --property=Linger")
+	wantCalls(t, f, "systemctl --user daemon-reload", "systemctl --user enable --now pilothouse.service", "loginctl show-user dev --property=Linger")
 
 	st, err := m.Status(ctx)
 	if err != nil {
@@ -274,12 +274,12 @@ func TestSystemdLifecycle(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	wantCalls(t, f, "systemctl --user start askgate.service", "systemctl --user stop askgate.service", "systemctl --user restart askgate.service")
+	wantCalls(t, f, "systemctl --user start pilothouse.service", "systemctl --user stop pilothouse.service", "systemctl --user restart pilothouse.service")
 
 	if _, err := m.Uninstall(ctx); err != nil {
 		t.Fatal(err)
 	}
-	wantCalls(t, f, "systemctl --user disable --now askgate.service", "systemctl --user daemon-reload")
+	wantCalls(t, f, "systemctl --user disable --now pilothouse.service", "systemctl --user daemon-reload")
 }
 
 func TestCommandErrorsAreReported(t *testing.T) {
@@ -324,8 +324,8 @@ func TestParseLaunchctlPrint(t *testing.T) {
 
 func TestNewUsesEnvironment(t *testing.T) {
 	setupHome(t)
-	m := New("/usr/local/bin/askgate")
-	if m.Env["ASKGATE_HOME"] != os.Getenv("ASKGATE_HOME") || m.Env["ASKGATE_RUN_DIR"] != "/tmp/agtest-run" {
+	m := New("/usr/local/bin/pilothouse")
+	if m.Env["PILOTHOUSE_HOME"] != os.Getenv("PILOTHOUSE_HOME") || m.Env["PILOTHOUSE_RUN_DIR"] != "/tmp/agtest-run" {
 		t.Fatalf("env = %v", m.Env)
 	}
 }
@@ -342,15 +342,15 @@ func wantCalls(t *testing.T, f *fakeRunner, want ...string) {
 }
 
 // launchctlPrintSample is the shape of `launchctl print gui/<uid>/<label>`.
-const launchctlPrintSample = `gui/501/dev.askgate.daemon = {
+const launchctlPrintSample = `gui/501/dev.pilothouse.daemon = {
 	active count = 1
-	path = /Users/dev/Library/LaunchAgents/dev.askgate.daemon.plist
+	path = /Users/dev/Library/LaunchAgents/dev.pilothouse.daemon.plist
 	type = LaunchAgent
 	state = running
 
-	program = /usr/local/bin/askgate
+	program = /usr/local/bin/pilothouse
 	arguments = {
-		/usr/local/bin/askgate
+		/usr/local/bin/pilothouse
 		daemon
 	}
 

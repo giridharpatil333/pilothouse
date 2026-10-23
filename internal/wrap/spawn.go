@@ -13,12 +13,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 // SpawnOptions describes a holder to start in the background.
 type SpawnOptions struct {
-	Exe       string   // askgate binary; default: os.Executable()
+	Exe       string   // pilothouse binary; default: os.Executable()
 	SessionID string   // default: NewSessionID()
 	Name      string   // default: basename of Dir
 	TaskID    string   //
@@ -39,7 +39,7 @@ func HolderLogPath(sessionID string) string {
 // whenever a new holder is spawned.
 const holderLogRetention = 7 * 24 * time.Hour
 
-// Spawn starts `askgate __holder` detached from this process (own session,
+// Spawn starts `pilothouse __holder` detached from this process (own session,
 // no terminal) and returns the session id once the holder's socket
 // answers. The holder is never a child of the daemon or a service manager,
 // so restarting either never kills an agent.
@@ -50,7 +50,7 @@ func Spawn(ctx context.Context, o SpawnOptions) (string, error) {
 	if o.Exe == "" {
 		exe, err := os.Executable()
 		if err != nil {
-			return "", fmt.Errorf("wrap: find askgate binary: %w", err)
+			return "", fmt.Errorf("wrap: find pilothouse binary: %w", err)
 		}
 		o.Exe = exe
 	}

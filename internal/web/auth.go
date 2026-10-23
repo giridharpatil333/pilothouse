@@ -16,12 +16,12 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/version"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/version"
 )
 
 const (
-	cookieName   = "ag_dev"
+	cookieName   = "ph_dev"
 	pairTTL      = 10 * time.Minute
 	loginTTL     = 5 * time.Minute
 	maxNameLen   = 60
@@ -33,7 +33,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		d := s.authenticate(r)
 		if d == nil {
-			writeErr(w, http.StatusUnauthorized, "unauthorized", "this device is not paired (run `askgate pair`)")
+			writeErr(w, http.StatusUnauthorized, "unauthorized", "this device is not paired (run `pilothouse pair`)")
 			return
 		}
 		s.touch(r.Context(), d.ID)
@@ -183,7 +183,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	}
 	if !ok {
 		s.pairLimit.fail(clientKey(r))
-		writeErr(w, http.StatusUnauthorized, "invalid_code", "this pairing code is wrong, used or expired — run `askgate pair` again")
+		writeErr(w, http.StatusUnauthorized, "invalid_code", "this pairing code is wrong, used or expired — run `pilothouse pair` again")
 		return
 	}
 	id, secret := newDeviceID(), randomToken(32)
@@ -377,7 +377,7 @@ func (s *Server) handleLocalDevices(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleLocalRevoke(w http.ResponseWriter, r *http.Request) {
 	err := s.revoke(r.Context(), r.PathValue("id"))
 	if errors.Is(err, errNoDevice) {
-		writeErr(w, http.StatusNotFound, "not_found", "no paired device with that id (see `askgate devices`)")
+		writeErr(w, http.StatusNotFound, "not_found", "no paired device with that id (see `pilothouse devices`)")
 		return
 	}
 	if err != nil {

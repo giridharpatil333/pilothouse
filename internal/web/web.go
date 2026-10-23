@@ -9,9 +9,9 @@
 //     (127.0.0.1/localhost:<port> or the host of web.public_url), which
 //     defeats DNS rebinding.
 //   - Devices pair with a one-time code and register a P-256 public key.
-//     They authenticate with an HttpOnly cookie "ag_dev" = "<id>.<secret>";
+//     They authenticate with an HttpOnly cookie "ph_dev" = "<id>.<secret>";
 //     only SHA-256(secret) is stored and compared in constant time.
-//   - State-changing requests need `X-Askgate: 1` and a same-origin Origin.
+//   - State-changing requests need `X-Pilothouse: 1` and a same-origin Origin.
 //   - Decisions additionally carry an ECDSA P-256 signature made with the
 //     device's non-extractable WebCrypto key, a timestamp within 120 s and
 //     a single-use nonce. The TCP listener never accepts unsigned decisions
@@ -39,10 +39,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/config"
-	"github.com/xasdta/askgate/internal/core"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/config"
+	"github.com/xasdta/pilothouse/internal/core"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 // Deps are the web server's collaborators.
@@ -150,7 +150,7 @@ func (s *Server) BaseURL() string {
 }
 
 // PublicURL is web.public_url (reachable off this machine), or "".
-// It follows edits to config.yaml (e.g. by `askgate remote tailscale`)
+// It follows edits to config.yaml (e.g. by `pilothouse remote tailscale`)
 // without a daemon restart: the file's mtime is checked at most every 2 s.
 func (s *Server) PublicURL() string {
 	s.pubMu.Lock()
@@ -279,8 +279,8 @@ func (s *Server) secure(next http.Handler) http.Handler {
 // preflight for cross-site callers) plus an exact same-origin Origin.
 func csrf(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Askgate") != "1" {
-			writeErr(w, http.StatusForbidden, "csrf", "missing X-Askgate header")
+		if r.Header.Get("X-Pilothouse") != "1" {
+			writeErr(w, http.StatusForbidden, "csrf", "missing X-Pilothouse header")
 			return
 		}
 		if o := r.Header.Get("Origin"); o == "" || !strings.EqualFold(o, originOf(r).base) {

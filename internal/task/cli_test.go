@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/wrap"
+	"github.com/xasdta/pilothouse/internal/wrap"
 )
 
-// TestCLIEndToEnd drives `askgate task …` through the real binary: the
+// TestCLIEndToEnd drives `pilothouse task …` through the real binary: the
 // agent runs under a detached holder, with no daemon.
 func TestCLIEndToEnd(t *testing.T) {
 	testEnv(t)
@@ -27,8 +27,8 @@ func TestCLIEndToEnd(t *testing.T) {
 		}
 	})
 	_, file, _, _ := runtime.Caller(0)
-	bin := filepath.Join(t.TempDir(), "askgate")
-	build := exec.Command("go", "build", "-o", bin, "./cmd/askgate")
+	bin := filepath.Join(t.TempDir(), "pilothouse")
+	build := exec.Command("go", "build", "-o", bin, "./cmd/pilothouse")
 	build.Dir = filepath.Join(filepath.Dir(file), "..", "..")
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build: %v\n%s", err, out)
@@ -36,7 +36,7 @@ func TestCLIEndToEnd(t *testing.T) {
 	repo := newRepo(t)
 	agent := fakeAgentScript(t, true)
 
-	askgate := func(args ...string) (string, error) {
+	pilothouse := func(args ...string) (string, error) {
 		cmd := exec.Command(bin, args...)
 		cmd.Dir = repo
 		out, err := cmd.CombinedOutput()
@@ -44,19 +44,19 @@ func TestCLIEndToEnd(t *testing.T) {
 	}
 	mustRun := func(args ...string) string {
 		t.Helper()
-		out, err := askgate(args...)
+		out, err := pilothouse(args...)
 		if err != nil {
-			t.Fatalf("askgate %s: %v\n%s", strings.Join(args, " "), err, out)
+			t.Fatalf("pilothouse %s: %v\n%s", strings.Join(args, " "), err, out)
 		}
 		return out
 	}
 
 	out := mustRun("task", "new", "--agent", agent, "Document the API")
 	id := regexp.MustCompile(`task (t_[a-z2-7]{10}) \(document-the-api\) started`).FindStringSubmatch(out)
-	if id == nil || !strings.Contains(out, "askgate attach s_") {
+	if id == nil || !strings.Contains(out, "pilothouse attach s_") {
 		t.Fatalf("task new output:\n%s", out)
 	}
-	wt := filepath.Join(os.Getenv("ASKGATE_HOME"), "worktrees", "my-repo", "document-the-api")
+	wt := filepath.Join(os.Getenv("PILOTHOUSE_HOME"), "worktrees", "my-repo", "document-the-api")
 
 	// The agent commits and exits; the task becomes ready for review.
 	deadline := time.Now().Add(15 * time.Second)
@@ -79,7 +79,7 @@ func TestCLIEndToEnd(t *testing.T) {
 	if out = mustRun("task", "diff", id[1]); !strings.Contains(out, "+task: Document the API") {
 		t.Fatalf("task diff:\n%s", out)
 	}
-	if out = mustRun("task", "done", id[1], "--keep"); !strings.Contains(out, "done; branch askgate/document-the-api kept") {
+	if out = mustRun("task", "done", id[1], "--keep"); !strings.Contains(out, "done; branch pilothouse/document-the-api kept") {
 		t.Fatalf("task done:\n%s", out)
 	}
 	if out = mustRun("task", "ls"); !strings.Contains(out, "no open tasks") {
@@ -95,7 +95,7 @@ func TestCLIEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	mustRun("task", "new", "--agent", sleeper, "--name", "slow one", "wait")
-	if out, err := askgate("task", "abandon", "slow-one"); err == nil || !strings.Contains(out, "still running") {
+	if out, err := pilothouse("task", "abandon", "slow-one"); err == nil || !strings.Contains(out, "still running") {
 		t.Fatalf("abandon while running: %v\n%s", err, out)
 	}
 	if out = mustRun("task", "abandon", "--force", "slow-one"); !strings.Contains(out, "stopping the agent") || !strings.Contains(out, "abandoned") {
@@ -107,7 +107,7 @@ func TestCLIEndToEnd(t *testing.T) {
 			t.Fatalf("agent still running after abandon --force: %+v", h)
 		}
 	}
-	if out, err := askgate("task", "diff", "t_zzzz"); err == nil || !strings.Contains(out, "no task matches") {
+	if out, err := pilothouse("task", "diff", "t_zzzz"); err == nil || !strings.Contains(out, "no task matches") {
 		t.Fatalf("diff unknown: %v\n%s", err, out)
 	}
 }

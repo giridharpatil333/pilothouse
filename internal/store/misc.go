@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // ---- grants ----

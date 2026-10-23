@@ -355,8 +355,8 @@ func isAssignment(w string) bool {
 }
 
 // cmdBase is the lower-cased executable name of a command word, so
-// "./askgate", "/opt/bin/askgate" and "ASKGATE" (case-insensitive
-// filesystems) all read as "askgate".
+// "./pilothouse", "/opt/bin/pilothouse" and "PILOTHOUSE" (case-insensitive
+// filesystems) all read as "pilothouse".
 func cmdBase(w string) string {
 	if j := strings.LastIndexByte(w, '/'); j >= 0 {
 		w = w[j+1:]

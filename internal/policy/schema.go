@@ -9,7 +9,7 @@ import (
 	"cel.dev/cel-go/cel"
 	"gopkg.in/yaml.v3"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // Limits that keep a policy file from becoming a performance problem at
@@ -20,8 +20,8 @@ const (
 	maxNameLen      = 100
 )
 
-// BuiltinPrefix is reserved for rule names shipped with Askgate.
-const BuiltinPrefix = "askgate-"
+// BuiltinPrefix is reserved for rule names shipped with Pilothouse.
+const BuiltinPrefix = "pilothouse-"
 
 // FileError is one problem in a policy file. Line is 1-based; 0 means
 // the problem is not tied to a line (unreadable file, empty document).
@@ -155,7 +155,7 @@ func compilePolicy(file string, data []byte, home string) ([]*rule, error) {
 		case "version":
 			sawVersion = true
 			if v.Kind != yaml.ScalarNode || v.Value != "1" {
-				p.errf(v, "unsupported version %q: this Askgate understands `version: 1`", v.Value)
+				p.errf(v, "unsupported version %q: this Pilothouse understands `version: 1`", v.Value)
 			}
 		case "rules":
 			rulesNode = v

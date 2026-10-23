@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 func scanAll(chunks ...string) []api.OSCBody {

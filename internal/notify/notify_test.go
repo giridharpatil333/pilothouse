@@ -14,20 +14,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/config"
-	"github.com/xasdta/askgate/internal/core"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/config"
+	"github.com/xasdta/pilothouse/internal/core"
 )
 
 func isolate(t *testing.T) {
-	t.Setenv("ASKGATE_HOME", t.TempDir())
-	t.Setenv("ASKGATE_USER_HOME", t.TempDir())
+	t.Setenv("PILOTHOUSE_HOME", t.TempDir())
+	t.Setenv("PILOTHOUSE_USER_HOME", t.TempDir())
 	run, err := os.MkdirTemp("/tmp", "ag")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(run) })
-	t.Setenv("ASKGATE_RUN_DIR", run)
+	t.Setenv("PILOTHOUSE_RUN_DIR", run)
 }
 
 type fakeChannel struct {
@@ -71,11 +71,11 @@ func (f *fakeChannel) count() int {
 
 func sampleRequest() *api.Request {
 	return &api.Request{ID: "r_abc", Agent: api.AgentClaude, Tool: "Bash", ToolKind: api.ToolShell,
-		Command: "git push origin main", Cwd: "/src/askgate", Status: api.RequestOpen, ExpiresAt: time.Now().Add(5 * time.Minute)}
+		Command: "git push origin main", Cwd: "/src/pilothouse", Status: api.RequestOpen, ExpiresAt: time.Now().Add(5 * time.Minute)}
 }
 
 func sampleSession() *api.Session {
-	return &api.Session{ID: "s_abc", Agent: api.AgentClaude, Title: "askgate", Branch: "main"}
+	return &api.Session{ID: "s_abc", Agent: api.AgentClaude, Title: "pilothouse", Branch: "main"}
 }
 
 func TestFanOutRouting(t *testing.T) {
@@ -95,7 +95,7 @@ func TestFanOutRouting(t *testing.T) {
 		t.Fatalf("desktop=%d push=%d webhook=%d", desk.count(), push.count(), hook.count())
 	}
 	got := push.got[0]
-	if got.Title != "Claude Code · askgate (main)" || got.Body != "Wants to run `git push origin main`" {
+	if got.Title != "Claude Code · pilothouse (main)" || got.Body != "Wants to run `git push origin main`" {
 		t.Fatalf("rendered %q / %q", got.Title, got.Body)
 	}
 	if err := n.Notify(ctx, core.Notification{Kind: core.NotifyTest}); !errors.Is(err, ErrClosed) {
@@ -148,7 +148,7 @@ func TestPerChannelTimeout(t *testing.T) {
 func TestText(t *testing.T) {
 	r := sampleRequest()
 	s := sampleSession()
-	if got := Line(core.Notification{Kind: core.NotifyRequest, Request: r, Session: s}); got != "Claude Code wants to run `git push origin main` · askgate (main)" {
+	if got := Line(core.Notification{Kind: core.NotifyRequest, Request: r, Session: s}); got != "Claude Code wants to run `git push origin main` · pilothouse (main)" {
 		t.Fatal(got)
 	}
 	long := *r
@@ -158,13 +158,13 @@ func TestText(t *testing.T) {
 	}
 	multi := *r
 	multi.Command, multi.ToolKind = "", api.ToolEdit
-	multi.Paths = []string{"/src/askgate/internal/web/web.go", "/src/askgate/README.md"}
+	multi.Paths = []string{"/src/pilothouse/internal/web/web.go", "/src/pilothouse/README.md"}
 	if got := Action(&multi); got != "wants to edit `internal/web/web.go` and 1 more" {
 		t.Fatal(got)
 	}
 	codex := *r
 	codex.Agent = api.AgentCodex
-	if got := Line(core.Notification{Kind: core.NotifyBlocked, Request: &codex}); got != "Codex wants to run `git push origin main` · askgate — answer in the terminal" {
+	if got := Line(core.Notification{Kind: core.NotifyBlocked, Request: &codex}); got != "Codex wants to run `git push origin main` · pilothouse — answer in the terminal" {
 		t.Fatal(got)
 	}
 	w := Render(core.Notification{Kind: core.NotifyWaiting, Session: &api.Session{Agent: api.AgentCodex, Title: "site", LastMessage: "All done.\nTests pass."}})
@@ -261,13 +261,13 @@ func TestNtfy(t *testing.T) {
 	isolate(t)
 	ts, got := capture(t, 200)
 	p := &fakePusher{public: "https://mac.tail1.ts.net"}
-	c := &Ntfy{Server: ts.URL + "/", Topic: "askgate-secret", Token: "tk_abc", Pusher: p, Client: ts.Client()}
+	c := &Ntfy{Server: ts.URL + "/", Topic: "pilothouse-secret", Token: "tk_abc", Pusher: p, Client: ts.Client()}
 	n := Render(core.Notification{Kind: core.NotifyRequest, Request: sampleRequest(), Session: &api.Session{Title: "répo"}, Remote: true})
 	if err := c.Send(context.Background(), n); err != nil {
 		t.Fatal(err)
 	}
 	r := got()[0]
-	if r.path != "/askgate-secret" || r.body != "Claude Code wants to run `git push origin main` · répo" {
+	if r.path != "/pilothouse-secret" || r.body != "Claude Code wants to run `git push origin main` · répo" {
 		t.Fatalf("publish %s %q", r.path, r.body)
 	}
 	h := r.header
@@ -311,7 +311,7 @@ func TestWebhook(t *testing.T) {
 	if err := json.Unmarshal([]byte(got()[0].body), &body); err != nil {
 		t.Fatal(err)
 	}
-	want := "Claude Code wants to run `git push origin main` · askgate (main)"
+	want := "Claude Code wants to run `git push origin main` · pilothouse (main)"
 	if body["text"] != want || body["content"] != want || got()[0].header.Get("Content-Type") != "application/json" {
 		t.Fatalf("body = %v", body)
 	}

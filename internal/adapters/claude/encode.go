@@ -1,9 +1,9 @@
 package claude
 
 import (
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/hookkit"
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/hookkit"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // EncodeResponse answers Claude Code. Every answer exits 0 with JSON on
@@ -36,7 +36,7 @@ func (Adapter) EncodeResponse(ev adapters.HookEvent, out adapters.HookOutcome) a
 	return hookkit.NoOpinion
 }
 
-// FailResponse: no opinion (Claude Code proceeds as if Askgate were
+// FailResponse: no opinion (Claude Code proceeds as if Pilothouse were
 // absent), except a deny at pre_tool when approvals.fail_closed is on.
 func (Adapter) FailResponse(kind adapters.HookKind, failClosed bool) adapters.HookResponse {
 	return hookkit.FailResponse(kind, failClosed)

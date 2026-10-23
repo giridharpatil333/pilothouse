@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 // Tasks are recorded locally in paths.Home()/tasks.json, always, and
 // mirrored to the daemon (POST /v1/tasks) whenever it is running. The
-// local file is the source of truth for `askgate task`: tasks keep
+// local file is the source of truth for `pilothouse task`: tasks keep
 // working with no daemon, and a daemon that was down when a task changed
 // is brought up to date the next time the task is touched.
 
@@ -42,13 +42,13 @@ func loadTasks() ([]api.Task, error) {
 		return nil, fmt.Errorf("%s is corrupt (%v) — fix or remove it", StorePath(), err)
 	}
 	if f.Version > storeVersion {
-		return nil, fmt.Errorf("%s was written by a newer askgate (format %d) — upgrade askgate", StorePath(), f.Version)
+		return nil, fmt.Errorf("%s was written by a newer pilothouse (format %d) — upgrade pilothouse", StorePath(), f.Version)
 	}
 	return f.Tasks, nil
 }
 
 // updateTasks applies fn to the task list under an exclusive lock, so
-// concurrent `askgate task` invocations don't lose each other's writes,
+// concurrent `pilothouse task` invocations don't lose each other's writes,
 // and saves atomically.
 func updateTasks(fn func([]api.Task) ([]api.Task, error)) error {
 	if err := paths.Ensure(); err != nil {

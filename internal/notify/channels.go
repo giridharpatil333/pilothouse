@@ -15,8 +15,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/core"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/core"
 )
 
 // ---- Desktop ----
@@ -73,7 +73,7 @@ func DesktopCommand(goos, title, body string, lookPath func(string) (string, err
 			return "", nil
 		}
 		// notify-send bodies may be parsed as markup by the server.
-		return p, []string{"--app-name=Askgate", "--", title, escapeMarkup(body)}
+		return p, []string{"--app-name=Pilothouse", "--", title, escapeMarkup(body)}
 	}
 	return "", nil
 }
@@ -118,7 +118,7 @@ type Ntfy struct {
 func (*Ntfy) Name() string { return "ntfy" }
 func (*Ntfy) Remote() bool { return true }
 
-// Request builds the publish request (exported for tests and `askgate doctor`).
+// Request builds the publish request (exported for tests and `pilothouse doctor`).
 func (c *Ntfy) Request(ctx context.Context, n core.Notification) (*http.Request, error) {
 	server := strings.TrimRight(c.Server, "/")
 	if server == "" {

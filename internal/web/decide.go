@@ -13,13 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 const (
 	// SignatureContext prefixes every signed decision so a signature can't
 	// be replayed as anything else.
-	SignatureContext = "askgate-decide:v1"
+	SignatureContext = "pilothouse-decide:v1"
 	// MaxClockSkew is how far a decision's ts may be from the daemon clock.
 	MaxClockSkew = 120 * time.Second
 	maxMessage   = 2000
@@ -27,7 +27,7 @@ const (
 
 // CanonicalDecision is the exact byte string a device signs:
 //
-//	askgate-decide:v1\n{id}\n{behavior}\n{scope}\n{ts}\n{nonce}
+//	pilothouse-decide:v1\n{id}\n{behavior}\n{scope}\n{ts}\n{nonce}
 //
 // ts is Unix milliseconds (JavaScript Date.now()); scope is "once" or
 // "session" (empty is normalized to "once" before signing).

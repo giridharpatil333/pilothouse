@@ -1,4 +1,4 @@
-// Package store persists Askgate's state in SQLite (modernc.org/sqlite,
+// Package store persists Pilothouse's state in SQLite (modernc.org/sqlite,
 // pure Go). It owns the sessions, requests, events, grants, tasks, evidence
 // and meta tables.
 //
@@ -21,8 +21,8 @@ import (
 
 	_ "modernc.org/sqlite" // registers the "sqlite" driver
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/core"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/core"
 )
 
 // Errors returned by lookups. ErrNotFound and ErrAlreadyClosed are the core
@@ -33,7 +33,7 @@ var (
 	ErrAmbiguous     = errors.New("ambiguous id prefix")
 )
 
-// DB is an open Askgate database. It is safe for concurrent use.
+// DB is an open Pilothouse database. It is safe for concurrent use.
 type DB struct {
 	Reader // reads on the reader pool
 

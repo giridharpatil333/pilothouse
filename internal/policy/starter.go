@@ -1,9 +1,9 @@
 package policy
 
-// StarterPolicy is written by `askgate policy init`. Every rule in it is
+// StarterPolicy is written by `pilothouse policy init`. Every rule in it is
 // a working example; tests compile it and check its behaviour.
-const StarterPolicy = `# Askgate policy — applied before every tool call of every agent.
-# Reference: https://github.com/xasdta/askgate/blob/main/docs/POLICY.md
+const StarterPolicy = `# Pilothouse policy — applied before every tool call of every agent.
+# Reference: https://github.com/xasdta/pilothouse/blob/main/docs/POLICY.md
 #
 #   action: deny   block the call; the agent sees your message
 #   action: ask    make a person confirm (the agent's own prompt at the desk,
@@ -12,8 +12,8 @@ const StarterPolicy = `# Askgate policy — applied before every tool call of ev
 #
 # Precedence: if any matching rule says deny, the call is denied; else if any
 # says ask, a person is asked; else allow. Order in this file only breaks ties.
-# Built-in rule askgate-self-protection always asks before an agent runs
-# askgate admin commands or edits Askgate/agent settings.
+# Built-in rule pilothouse-self-protection always asks before an agent runs
+# pilothouse admin commands or edits Pilothouse/agent settings.
 #
 # match:  globs, all fields AND-ed. Fields: agent, tool, kind, command, path,
 #         cwd, repo, branch. kind is one of shell, edit, read, web, mcp, other.
@@ -24,8 +24,8 @@ const StarterPolicy = `# Askgate policy — applied before every tool call of ev
 #         kind, command, paths, path, input, cwd, repo, branch, mode, hour,
 #         weekday. Extras: glob(s, pattern), has_word(s, word), strings ext.
 #
-# Check your edits with:  askgate policy check
-# Try a call with:        askgate policy test --command "git push -f origin main"
+# Check your edits with:  pilothouse policy check
+# Try a call with:        pilothouse policy test --command "git push -f origin main"
 version: 1
 rules:
   # --- Destructive commands -------------------------------------------------
@@ -54,7 +54,7 @@ rules:
       path: [".env", ".env.*", "*.pem", "*.key", "id_rsa*", "id_ed25519*", "~/.ssh/**", "~/.aws/credentials", "~/.config/gh/hosts.yml"]
     when: '!paths.all(p, p.endsWith(".example") || p.endsWith(".sample") || p.endsWith(".template") || p.endsWith(".pub"))'
     action: deny
-    message: This file holds secrets; Askgate policy keeps agents out of it. Ask the user to provide what you need.
+    message: This file holds secrets; Pilothouse policy keeps agents out of it. Ask the user to provide what you need.
 
   - name: ask-secret-files-in-shell
     description: Shell commands that touch .env or SSH/AWS credentials need a person

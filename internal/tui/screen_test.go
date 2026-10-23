@@ -3,9 +3,9 @@ package tui
 // A real-PTY smoke test: run the inbox against a fake daemon on a Unix
 // socket inside a pseudo-terminal, feed the raw output through a small
 // VT emulator and capture the screen as text. It is skipped unless
-// ASKGATE_SCREEN=1 because its purpose is a human look at the result:
+// PILOTHOUSE_SCREEN=1 because its purpose is a human look at the result:
 //
-//	ASKGATE_SCREEN=1 ASKGATE_SCREEN_OUT=/tmp/screens go test -run TestScreen -v ./internal/tui
+//	PILOTHOUSE_SCREEN=1 PILOTHOUSE_SCREEN_OUT=/tmp/screens go test -run TestScreen -v ./internal/tui
 
 import (
 	"encoding/json"
@@ -28,8 +28,8 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/creack/pty"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
 )
 
 // vt is a minimal terminal emulator: enough of ECMA-48 for Bubble Tea's
@@ -253,7 +253,7 @@ func screenDaemon(t *testing.T, snap api.Snapshot) string {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(dir) })
-	sock := filepath.Join(dir, "askgate.sock")
+	sock := filepath.Join(dir, "pilothouse.sock")
 	ln, err := net.Listen("unix", sock)
 	if err != nil {
 		t.Fatal(err)
@@ -293,11 +293,11 @@ func screenRenderer(w io.Writer) *lipgloss.Renderer {
 }
 
 func TestScreen(t *testing.T) {
-	if os.Getenv("ASKGATE_SCREEN") == "" {
-		t.Skip("set ASKGATE_SCREEN=1 to capture real-PTY screens")
+	if os.Getenv("PILOTHOUSE_SCREEN") == "" {
+		t.Skip("set PILOTHOUSE_SCREEN=1 to capture real-PTY screens")
 	}
-	t.Setenv("ASKGATE_USER_HOME", "/home/dev")
-	outDir := os.Getenv("ASKGATE_SCREEN_OUT")
+	t.Setenv("PILOTHOUSE_USER_HOME", "/home/dev")
+	outDir := os.Getenv("PILOTHOUSE_SCREEN_OUT")
 	for _, sz := range []struct{ w, h int }{{120, 35}, {70, 30}} {
 		t.Run(fmt.Sprintf("%dx%d", sz.w, sz.h), func(t *testing.T) {
 			sock := screenDaemon(t, fixtureSnapshot())

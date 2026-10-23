@@ -1,4 +1,4 @@
-// Package config loads ~/.askgate/config.yaml. Every field has a working
+// Package config loads ~/.pilothouse/config.yaml. Every field has a working
 // default so a missing file is valid.
 package config
 
@@ -10,7 +10,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 type Config struct {
@@ -18,7 +18,7 @@ type Config struct {
 	// It binds to loopback only; remote access goes through Tailscale Serve.
 	Web struct {
 		Addr      string `yaml:"addr"`       // default 127.0.0.1:7517
-		PublicURL string `yaml:"public_url"` // e.g. https://mac.tailnet.ts.net, set by `askgate remote tailscale`
+		PublicURL string `yaml:"public_url"` // e.g. https://mac.tailnet.ts.net, set by `pilothouse remote tailscale`
 	} `yaml:"web"`
 
 	Presence struct {
@@ -116,7 +116,7 @@ func (c *Config) Validate() error {
 
 // UpdateCheckEnabled reports whether the anonymous update check is on.
 func (c *Config) UpdateCheckEnabled() bool {
-	if os.Getenv("ASKGATE_NO_UPDATE_CHECK") != "" {
+	if os.Getenv("PILOTHOUSE_NO_UPDATE_CHECK") != "" {
 		return false
 	}
 	return c.UpdateCheck == nil || *c.UpdateCheck

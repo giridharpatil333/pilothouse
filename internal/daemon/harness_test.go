@@ -13,13 +13,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/config"
-	"github.com/xasdta/askgate/internal/core"
-	"github.com/xasdta/askgate/internal/paths"
-	"github.com/xasdta/askgate/internal/policy"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/config"
+	"github.com/xasdta/pilothouse/internal/core"
+	"github.com/xasdta/pilothouse/internal/paths"
+	"github.com/xasdta/pilothouse/internal/policy"
 )
 
 const fakeKind api.AgentKind = "fake"
@@ -150,7 +150,7 @@ type harness struct {
 
 type guardResult struct{ err error }
 
-// newHarness points every Askgate path at fresh temp dirs (BUILD-SPEC
+// newHarness points every Pilothouse path at fresh temp dirs (BUILD-SPEC
 // invariant 1). The run dir lives under /tmp to keep the socket path short.
 func newHarness(tb testing.TB) *harness {
 	tb.Helper()
@@ -159,10 +159,10 @@ func newHarness(tb testing.TB) *harness {
 		tb.Fatal(err)
 	}
 	tb.Cleanup(func() { _ = os.RemoveAll(run) })
-	tb.Setenv("ASKGATE_HOME", tb.TempDir())
-	tb.Setenv("ASKGATE_USER_HOME", tb.TempDir())
-	tb.Setenv("ASKGATE_RUN_DIR", run)
-	tb.Setenv("ASKGATE_NO_UPDATE_CHECK", "1")
+	tb.Setenv("PILOTHOUSE_HOME", tb.TempDir())
+	tb.Setenv("PILOTHOUSE_USER_HOME", tb.TempDir())
+	tb.Setenv("PILOTHOUSE_RUN_DIR", run)
+	tb.Setenv("PILOTHOUSE_NO_UPDATE_CHECK", "1")
 
 	cfg := config.Default()
 	cfg.Web.Addr = "127.0.0.1:0"
@@ -182,7 +182,7 @@ func newHarness(tb testing.TB) *harness {
 func (h *harness) start(tb testing.TB) {
 	tb.Helper()
 	var logOut io.Writer = io.Discard
-	if os.Getenv("ASKGATE_TEST_LOG") != "" {
+	if os.Getenv("PILOTHOUSE_TEST_LOG") != "" {
 		logOut = os.Stderr
 	}
 	opts := Options{

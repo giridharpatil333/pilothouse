@@ -15,6 +15,6 @@ const fixture = {
   ts: 1767225600000, // 2026-01-01T00:00:00Z
   nonce: 'bm9uY2Utd2ViY3J5cHRvLTE',
 };
-const canonical = ['askgate-decide:v1', fixture.request_id, fixture.behavior, fixture.scope, String(fixture.ts), fixture.nonce].join('\n');
+const canonical = ['pilothouse-decide:v1', fixture.request_id, fixture.behavior, fixture.scope, String(fixture.ts), fixture.nonce].join('\n');
 const sig = await subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, pair.privateKey, new TextEncoder().encode(canonical));
 console.log(JSON.stringify({ ...fixture, public_key: b64url(spki), canonical, sig: b64url(sig) }, null, 2));

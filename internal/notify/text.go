@@ -7,8 +7,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/core"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/core"
 )
 
 const maxCommand = 80
@@ -122,7 +122,7 @@ func Render(n core.Notification) core.Notification {
 	if n.Title == "" {
 		switch {
 		case n.Kind == core.NotifyTest:
-			n.Title = "Askgate test notification"
+			n.Title = "Pilothouse test notification"
 		case where != "":
 			n.Title = agent + " · " + where
 		default:

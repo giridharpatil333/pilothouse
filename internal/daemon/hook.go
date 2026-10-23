@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/core"
-	"github.com/xasdta/askgate/internal/policy"
-	"github.com/xasdta/askgate/internal/state"
-	"github.com/xasdta/askgate/internal/store"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/core"
+	"github.com/xasdta/pilothouse/internal/policy"
+	"github.com/xasdta/pilothouse/internal/state"
+	"github.com/xasdta/pilothouse/internal/store"
 )
 
 const (
@@ -69,7 +69,7 @@ func (d *Daemon) Hook(ctx context.Context, env adapters.HookEnvelope) adapters.H
 
 func (d *Daemon) routeHook(ctx context.Context, ad adapters.Adapter, env adapters.HookEnvelope, ev adapters.HookEvent) (adapters.HookResponse, error) {
 	h := &hookCall{ad: ad, env: env, ev: ev, cwd: firstNonEmpty(ev.Cwd, env.Cwd), mode: api.ModeObserved}
-	if env.AskgateSessionID != "" {
+	if env.PilothouseSessionID != "" {
 		h.mode = api.ModeWrapped
 	}
 	h.root, h.branch = d.git.lookup(ctx, h.cwd)
@@ -183,7 +183,7 @@ func (d *Daemon) decidePreTool(ctx context.Context, tx *store.Tx, s api.Session,
 	switch pol.Action {
 	case api.BehaviorDeny:
 		out = adapters.HookOutcome{Behavior: api.BehaviorDeny,
-			Message: firstNonEmpty(pol.Message, "Blocked by Askgate policy rule "+pol.Rule+".")}
+			Message: firstNonEmpty(pol.Message, "Blocked by Pilothouse policy rule "+pol.Rule+".")}
 	case api.BehaviorAsk:
 		out = adapters.HookOutcome{Behavior: api.BehaviorAsk, Message: pol.Message}
 	default:
@@ -192,7 +192,7 @@ func (d *Daemon) decidePreTool(ctx context.Context, tx *store.Tx, s api.Session,
 			return out, err
 		}
 		if g, ok := matchGrant(grants, ev.Tool, ev.ToolKind, ev.Command); ok {
-			out = adapters.HookOutcome{Behavior: api.BehaviorAllow, Message: "Allowed for this session in Askgate."}
+			out = adapters.HookOutcome{Behavior: api.BehaviorAllow, Message: "Allowed for this session in Pilothouse."}
 			pd.Rule, pd.File, pd.Message, pd.GrantID = "", "", out.Message, g.ID
 		} else if pol.Action == api.BehaviorAllow {
 			out = adapters.HookOutcome{Behavior: api.BehaviorAllow, Message: pol.Message}
@@ -262,7 +262,7 @@ func (d *Daemon) holdPermission(ctx context.Context, p *permissionPlan, sess api
 	case <-d.ctx.Done():
 		// Shutdown releases every held request, but one that registered
 		// during the release pass releases itself here.
-		final = d.endHold(p, api.RequestSteppedAside, "the askgate daemon is stopping")
+		final = d.endHold(p, api.RequestSteppedAside, "the pilothouse daemon is stopping")
 	}
 
 	switch final.Status {
@@ -326,12 +326,12 @@ func (d *Daemon) scheduleBlockedNotice(req api.Request, sess api.Session) {
 	})
 }
 
-// sessionForHook finds the hook's session or creates it: by Askgate id for
+// sessionForHook finds the hook's session or creates it: by Pilothouse id for
 // wrapped sessions, else by the agent's session id, else by agent PID.
 func (d *Daemon) sessionForHook(ctx context.Context, tx *store.Tx, h *hookCall) (api.Session, error) {
 	err := store.ErrNotFound
 	var s api.Session
-	switch id := h.env.AskgateSessionID; {
+	switch id := h.env.PilothouseSessionID; {
 	case id != "" && validSessionID(id):
 		s, err = tx.Session(ctx, id)
 		if errors.Is(err, store.ErrNotFound) {
@@ -359,7 +359,7 @@ func (d *Daemon) createSession(ctx context.Context, tx *store.Tx, h *hookCall, i
 		ID: id, Agent: h.env.Agent, Mode: h.mode, Machine: d.machine,
 		Title: titleFor(h.root, h.cwd, h.env.Agent), Cwd: h.cwd, RepoRoot: h.root, Branch: h.branch,
 		PID: h.agentPID, AgentSessionID: h.ev.AgentSessionID, TranscriptPath: h.ev.TranscriptPath,
-		TaskID: h.env.Env["ASKGATE_TASK_ID"], State: api.StateStarting, StartedAt: now, UpdatedAt: now,
+		TaskID: h.env.Env["PILOTHOUSE_TASK_ID"], State: api.StateStarting, StartedAt: now, UpdatedAt: now,
 	}
 	return d.saveSession(ctx, tx, nil, s)
 }
@@ -380,7 +380,7 @@ func applyHook(s *api.Session, h *hookCall, now time.Time) {
 		s.RepoRoot, s.Branch = h.root, h.branch
 	}
 	if s.TaskID == "" {
-		s.TaskID = h.env.Env["ASKGATE_TASK_ID"]
+		s.TaskID = h.env.Env["PILOTHOUSE_TASK_ID"]
 	}
 	if s.ExitedAt != nil && ev.Kind != adapters.HookSessionEnd {
 		// A resumed conversation (same agent session id) is alive again.
@@ -453,9 +453,9 @@ func decisionMessage(dec *api.Decision) string {
 		return dec.Message
 	}
 	if dec.Behavior == api.BehaviorDeny {
-		return "Denied in Askgate (" + dec.By + ")."
+		return "Denied in Pilothouse (" + dec.By + ")."
 	}
-	return "Allowed in Askgate (" + dec.By + ")."
+	return "Allowed in Pilothouse (" + dec.By + ")."
 }
 
 func titleFor(root, cwd string, agent api.AgentKind) string {

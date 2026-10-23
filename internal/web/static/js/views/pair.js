@@ -35,8 +35,8 @@ export function pairView({ code, mode, onDone }) {
     h('h1', null, title), h('p', null, text));
 
   async function redeem(c, name) {
-    if (!self.AskgateKeys) throw new Error('Keys unavailable');
-    const publicKey = await self.AskgateKeys.create();
+    if (!self.PilothouseKeys) throw new Error('Keys unavailable');
+    const publicKey = await self.PilothouseKeys.create();
     return api('POST', '/api/pair', { code: c, name, public_key: publicKey });
   }
 

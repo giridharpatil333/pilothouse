@@ -104,7 +104,7 @@ func (db *DB) migrate(ctx context.Context) error {
 		return err
 	}
 	if cur > len(migrations) {
-		return fmt.Errorf("database schema v%d is newer than this askgate (v%d): upgrade askgate", cur, len(migrations))
+		return fmt.Errorf("database schema v%d is newer than this pilothouse (v%d): upgrade pilothouse", cur, len(migrations))
 	}
 	for v := cur; v < len(migrations); v++ {
 		if err := db.applyMigration(ctx, v+1, migrations[v]); err != nil {

@@ -1,4 +1,4 @@
- askgate  studio.local                  ● here · auto   3 need you · 2 working · 2 waiting   ● live
+ pilothouse  studio.local               ● here · auto   3 need you · 2 working · 2 waiting   ● live
 
 ── Keys ────────────────────────────────────────────────────────────────────────────────────────────
    j k  ↑ ↓      move
@@ -16,7 +16,7 @@
    away          requests are held and sent to your paired phone
    auto          here or away from keyboard and mouse idle time
 
-   From any shell: askgate approve <id> · askgate deny <id> -m "why" · askgate ls
+   From any shell: pilothouse approve <id> · pilothouse deny <id> -m "why" · pilothouse ls
 
 
 

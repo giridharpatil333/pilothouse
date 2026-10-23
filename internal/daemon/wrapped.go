@@ -5,12 +5,12 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/state"
-	"github.com/xasdta/askgate/internal/store"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/state"
+	"github.com/xasdta/pilothouse/internal/store"
 )
 
-// RegisterWrapped records a session started by `askgate run`. It is
+// RegisterWrapped records a session started by `pilothouse run`. It is
 // idempotent on SessionID: holders re-register after a daemon restart, and
 // a hook may have created the session first.
 func (d *Daemon) RegisterWrapped(ctx context.Context, b api.WrappedSessionBody) (api.Session, error) {

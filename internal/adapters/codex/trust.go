@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/xasdta/askgate/internal/adapters/hookkit"
+	"github.com/xasdta/pilothouse/internal/adapters/hookkit"
 )
 
 // Codex runs a hook from ~/.codex/hooks.json only once it is trusted:
@@ -30,7 +30,7 @@ import (
 
 // markerComment precedes every trust table we write, so uninstall finds
 // them even if hooks.json was edited by hand in between.
-const markerComment = "# askgate-managed: trust for an askgate hook in hooks.json (askgate hooks uninstall removes it)"
+const markerComment = "# pilothouse-managed: trust for an pilothouse hook in hooks.json (pilothouse hooks uninstall removes it)"
 
 // eventLabels mirrors hook_event_key_label.
 var eventLabels = map[string]string{
@@ -122,7 +122,7 @@ type trustEdit struct {
 type ErrUnsupportedLayout struct{ Detail string }
 
 func (e ErrUnsupportedLayout) Error() string {
-	return "config.toml " + e.Detail + "; Askgate edits only [hooks.state.\"…\"] tables. Trust Askgate's hooks in Codex instead (it asks at startup, or use /hooks)"
+	return "config.toml " + e.Detail + "; Pilothouse edits only [hooks.state.\"…\"] tables. Trust Pilothouse's hooks in Codex instead (it asks at startup, or use /hooks)"
 }
 
 // applyTrust rewrites config.toml source so the trust tables match e,

@@ -2,10 +2,10 @@
 package all
 
 import (
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/claude"
-	"github.com/xasdta/askgate/internal/adapters/codex"
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/claude"
+	"github.com/xasdta/pilothouse/internal/adapters/codex"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // List returns every adapter, in display order.

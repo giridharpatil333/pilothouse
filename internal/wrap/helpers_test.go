@@ -18,22 +18,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
-// testEnv points every Askgate path at temp dirs (Invariant 1) and kills
+// testEnv points every Pilothouse path at temp dirs (Invariant 1) and kills
 // any holder and agent left behind when the test ends.
 func testEnv(t *testing.T) {
 	t.Helper()
-	t.Setenv("ASKGATE_HOME", t.TempDir())
-	t.Setenv("ASKGATE_USER_HOME", t.TempDir())
+	t.Setenv("PILOTHOUSE_HOME", t.TempDir())
+	t.Setenv("PILOTHOUSE_USER_HOME", t.TempDir())
 	run, err := os.MkdirTemp("/tmp", "ag")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("ASKGATE_RUN_DIR", run)
-	t.Setenv("ASKGATE_NO_UPDATE_CHECK", "1")
+	t.Setenv("PILOTHOUSE_RUN_DIR", run)
+	t.Setenv("PILOTHOUSE_NO_UPDATE_CHECK", "1")
 	t.Cleanup(func() {
 		killHolders(t)
 		os.RemoveAll(run)
@@ -61,18 +61,18 @@ var (
 	binDir  string
 )
 
-// askgateBin builds the askgate binary once per test run.
-func askgateBin(t *testing.T) string {
+// pilothouseBin builds the pilothouse binary once per test run.
+func pilothouseBin(t *testing.T) string {
 	t.Helper()
 	binOnce.Do(func() {
-		binDir, binErr = os.MkdirTemp("", "askgate-bin")
+		binDir, binErr = os.MkdirTemp("", "pilothouse-bin")
 		if binErr != nil {
 			return
 		}
 		_, file, _, _ := runtime.Caller(0)
 		root := filepath.Join(filepath.Dir(file), "..", "..")
-		binPath = filepath.Join(binDir, "askgate")
-		cmd := exec.Command("go", "build", "-race", "-o", binPath, "./cmd/askgate")
+		binPath = filepath.Join(binDir, "pilothouse")
+		cmd := exec.Command("go", "build", "-race", "-o", binPath, "./cmd/pilothouse")
 		cmd.Dir = root
 		var out bytes.Buffer
 		cmd.Stdout, cmd.Stderr = &out, &out
@@ -81,7 +81,7 @@ func askgateBin(t *testing.T) string {
 		}
 	})
 	if binErr != nil {
-		t.Fatalf("build askgate: %v", binErr)
+		t.Fatalf("build pilothouse: %v", binErr)
 	}
 	return binPath
 }

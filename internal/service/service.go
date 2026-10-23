@@ -1,4 +1,4 @@
-// Package service installs the Askgate daemon as a per-user login service:
+// Package service installs the Pilothouse daemon as a per-user login service:
 // a launchd user agent on macOS, a systemd user unit on Linux.
 //
 // The daemon runs as the user (never root) because it needs the user's
@@ -20,18 +20,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 const (
 	// Label is the launchd job label.
-	Label = "dev.askgate.daemon"
+	Label = "dev.pilothouse.daemon"
 	// Unit is the systemd user unit name.
-	Unit = "askgate.service"
+	Unit = "pilothouse.service"
 )
 
 // ErrUnsupported is returned on systems without a supported user service
-// manager; callers fall back to `askgate start`.
+// manager; callers fall back to `pilothouse start`.
 var ErrUnsupported = errors.New("no supported service manager on this system (launchd or systemd --user)")
 
 // Runner runs a service-manager command and returns combined output.
@@ -46,11 +46,11 @@ func ExecRunner(ctx context.Context, name string, args ...string) ([]byte, error
 // usable; build one with New or fill every field (tests).
 type Manager struct {
 	GOOS string // "darwin" or "linux"
-	Exe  string // absolute path of the askgate binary to run
+	Exe  string // absolute path of the pilothouse binary to run
 	UID  int
 	Run  Runner
-	// Env is copied into the service environment: ASKGATE_HOME and
-	// ASKGATE_RUN_DIR when set (so the service uses the same data dir as
+	// Env is copied into the service environment: PILOTHOUSE_HOME and
+	// PILOTHOUSE_RUN_DIR when set (so the service uses the same data dir as
 	// the CLI that installed it) and PATH (service managers start jobs
 	// with a minimal PATH, but the daemon needs git, tailscale and the
 	// notification helpers the user has installed).
@@ -60,7 +60,7 @@ type Manager struct {
 // New returns a Manager for this machine running exe.
 func New(exe string) *Manager {
 	env := map[string]string{}
-	for _, k := range []string{"ASKGATE_HOME", "ASKGATE_RUN_DIR", "PATH"} {
+	for _, k := range []string{"PILOTHOUSE_HOME", "PILOTHOUSE_RUN_DIR", "PATH"} {
 		if v := os.Getenv(k); v != "" {
 			env[k] = v
 		}
@@ -100,7 +100,7 @@ func (m *Manager) args() []string {
 // Render returns the service definition file contents.
 func (m *Manager) Render() ([]byte, error) {
 	if m.Exe == "" || !filepath.IsAbs(m.Exe) {
-		return nil, fmt.Errorf("service needs the absolute path of askgate, got %q", m.Exe)
+		return nil, fmt.Errorf("service needs the absolute path of pilothouse, got %q", m.Exe)
 	}
 	switch m.GOOS {
 	case "darwin":
@@ -124,7 +124,7 @@ func (m *Manager) renderPlist() []byte {
 	var b bytes.Buffer
 	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Written by askgate service install. Changes are overwritten; edit ~/.askgate/config.yaml instead. -->
+<!-- Written by pilothouse service install. Changes are overwritten; edit ~/.pilothouse/config.yaml instead. -->
 <plist version="1.0">
 <dict>
 	<key>Label</key>
@@ -144,8 +144,8 @@ func (m *Manager) renderPlist() []byte {
 		b.WriteString("\t</dict>\n")
 	}
 	// KeepAlive{SuccessfulExit:false}: restart after a crash, but let
-	// `askgate stop` (a clean exit) stay stopped. AbandonProcessGroup:
-	// `askgate run` holders must survive a daemon restart. Interactive:
+	// `pilothouse stop` (a clean exit) stay stopped. AbandonProcessGroup:
+	// `pilothouse run` holders must survive a daemon restart. Interactive:
 	// approvals are latency-sensitive, so don't let launchd throttle us.
 	b.WriteString(`	<key>RunAtLoad</key>
 	<true/>
@@ -173,10 +173,10 @@ func xmlEscape(s string) string {
 
 func (m *Manager) renderUnit() []byte {
 	var b bytes.Buffer
-	b.WriteString(`# Written by askgate service install. Changes are overwritten.
+	b.WriteString(`# Written by pilothouse service install. Changes are overwritten.
 [Unit]
-Description=Askgate daemon: one inbox for every coding agent
-Documentation=https://github.com/xasdta/askgate
+Description=Pilothouse daemon: one inbox for every coding agent
+Documentation=https://github.com/xasdta/pilothouse
 
 [Service]
 Type=simple
@@ -189,7 +189,7 @@ Type=simple
 	for _, k := range m.envKeys() {
 		b.WriteString("Environment=" + systemdQuote(k+"="+m.Env[k]) + "\n")
 	}
-	// KillMode=process: stopping the daemon must not kill `askgate run`
+	// KillMode=process: stopping the daemon must not kill `pilothouse run`
 	// holders that happen to be in its cgroup.
 	b.WriteString(`Restart=on-failure
 RestartSec=2
@@ -436,7 +436,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	case "darwin":
 		if !m.launchdLoaded(ctx) {
 			if _, err := os.Stat(m.Path()); err != nil {
-				return errors.New("service not installed — run `askgate service install`")
+				return errors.New("service not installed — run `pilothouse service install`")
 			}
 			_, err := m.run(ctx, "launchctl", "bootstrap", m.gui(), m.Path())
 			return err

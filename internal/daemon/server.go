@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/core"
-	"github.com/xasdta/askgate/internal/store"
-	"github.com/xasdta/askgate/internal/version"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/core"
+	"github.com/xasdta/pilothouse/internal/store"
+	"github.com/xasdta/pilothouse/internal/version"
 )
 
 const (
@@ -357,7 +357,7 @@ func (d *Daemon) handleNotifyTest(w http.ResponseWriter, _ *http.Request) {
 	// One local and one remote notification, so every configured channel
 	// (desktop, push, ntfy, webhooks) gets a test.
 	for _, remote := range []bool{false, true} {
-		d.notify(core.Notification{Kind: core.NotifyTest, Title: "Askgate test notification",
+		d.notify(core.Notification{Kind: core.NotifyTest, Title: "Pilothouse test notification",
 			Body: "Notifications from " + d.machine + " work.", Remote: remote})
 	}
 	w.WriteHeader(http.StatusNoContent)

@@ -3,10 +3,10 @@ package wrap
 import (
 	"strings"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
-// OSC 7501 is Askgate's status escape (layer L1): an agent, or a wrapper
+// OSC 7501 is Pilothouse's status escape (layer L1): an agent, or a wrapper
 // script around one, prints
 //
 //	ESC ] 7501 ; state=<s> [; app=<a>] [; kind=<k>] (BEL | ESC \)

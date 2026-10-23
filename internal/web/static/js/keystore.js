@@ -1,6 +1,6 @@
 /*
  * Device key store and signed decisions. A classic script shared by the
- * page (window.AskgateKeys) and the service worker (importScripts), so
+ * page (window.PilothouseKeys) and the service worker (importScripts), so
  * both sign decisions with the same canonical format.
  *
  * The ECDSA P-256 private key is generated non-extractable and kept in
@@ -49,7 +49,7 @@
 
   /** The exact string the daemon verifies (internal/web CanonicalDecision). */
   function canonical(id, behavior, scope, ts, nonce) {
-    return ['askgate-decide:v1', id, behavior, scope || 'once', String(ts), nonce].join('\n');
+    return ['pilothouse-decide:v1', id, behavior, scope || 'once', String(ts), nonce].join('\n');
   }
 
   function load() {
@@ -92,7 +92,7 @@
         return g.fetch('/api/requests/' + encodeURIComponent(id) + '/decide', {
           method: 'POST',
           credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', 'X-Askgate': '1' },
+          headers: { 'Content-Type': 'application/json', 'X-Pilothouse': '1' },
           body: JSON.stringify(body)
         }).then(function (res) {
           return res.json().catch(function () { return {}; }).then(function (data) {
@@ -105,5 +105,5 @@
     });
   }
 
-  g.AskgateKeys = { load: load, create: create, clear: clear, canonical: canonical, decide: decide };
+  g.PilothouseKeys = { load: load, create: create, clear: clear, canonical: canonical, decide: decide };
 })(self);

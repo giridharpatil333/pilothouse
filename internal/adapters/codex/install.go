@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/hookkit"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/hookkit"
 )
 
 var owned = hookkit.OwnedBy("codex")
 
-// wiredEvents are the Codex events Askgate listens to. Codex has no
+// wiredEvents are the Codex events Pilothouse listens to. Codex has no
 // Notification event; PermissionRequest is the "needs a person" signal.
 // SessionEnd and Interrupt get 3 s (Codex's maximum for them; default 1 s)
 // so the shim's own 1–2 s budget decides, not Codex's kill.
@@ -86,7 +86,7 @@ func (p plan) change(summary string) adapters.Change {
 			Changed: true,
 			Before:  string(p.config.Data),
 			After:   p.newConfig,
-			Summary: "Record Codex hook trust for Askgate's hooks",
+			Summary: "Record Codex hook trust for Pilothouse's hooks",
 		}}
 	}
 	return ch
@@ -118,7 +118,7 @@ func (p plan) commit(ch *adapters.Change) error {
 // untrusted and Codex asks the person to review them at startup.
 func (Adapter) InstallHooks(opts adapters.InstallOptions) (adapters.Change, error) {
 	if opts.ShimPath == "" {
-		return adapters.Change{}, errors.New("install: no askgate binary path")
+		return adapters.Change{}, errors.New("install: no pilothouse binary path")
 	}
 	p, err := makePlan(specs(opts.ShimPath))
 	if err != nil {
@@ -145,9 +145,9 @@ func (Adapter) UninstallHooks(opts adapters.InstallOptions) (adapters.Change, er
 	if err != nil {
 		return adapters.Change{}, err
 	}
-	summary := "No Askgate hooks in " + HooksPath()
+	summary := "No Pilothouse hooks in " + HooksPath()
 	if p.hooks.Result.Changed || p.configChanged() {
-		summary = fmt.Sprintf("Remove %d Askgate hook handlers from %s", len(p.hooks.Result.Found), HooksPath())
+		summary = fmt.Sprintf("Remove %d Pilothouse hook handlers from %s", len(p.hooks.Result.Found), HooksPath())
 	}
 	if p.trustErr != nil {
 		summary += fmt.Sprintf(" (trust entries in config.toml left as they are: %v)", p.trustErr)
@@ -184,7 +184,7 @@ func (Adapter) Status(opts adapters.InstallOptions) (adapters.HookStatus, error)
 		}
 	}
 	if st.Installed && len(missing) > 0 {
-		st.Problems = append(st.Problems, "not wired: "+strings.Join(missing, ", ")+"; run `askgate hooks install --agent codex`")
+		st.Problems = append(st.Problems, "not wired: "+strings.Join(missing, ", ")+"; run `pilothouse hooks install --agent codex`")
 	}
 	doc, perr := parseTOML(string(p.config.Data))
 	switch {
@@ -194,7 +194,7 @@ func (Adapter) Status(opts adapters.InstallOptions) (adapters.HookStatus, error)
 		st.Problems = append(st.Problems, "[features] hooks = false in config.toml turns Codex hooks off")
 	case st.Installed && opts.ShimPath != "" && !p.hooks.Result.Changed:
 		if n := untrusted(doc, p.hooks.Result.Placed, specs(opts.ShimPath)); n > 0 {
-			st.Problems = append(st.Problems, fmt.Sprintf("Codex will skip %d Askgate hooks until they are trusted: run `askgate hooks install --agent codex`, or approve them in Codex (/hooks)", n))
+			st.Problems = append(st.Problems, fmt.Sprintf("Codex will skip %d Pilothouse hooks until they are trusted: run `pilothouse hooks install --agent codex`, or approve them in Codex (/hooks)", n))
 		}
 	}
 	current := !p.hooks.Result.Changed && !p.configChanged()

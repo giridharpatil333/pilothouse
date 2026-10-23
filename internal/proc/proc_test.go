@@ -56,7 +56,7 @@ func TestAncestorsIncludesGo(t *testing.T) {
 			found = true
 		}
 	}
-	if !found && os.Getenv("ASKGATE_TEST_NO_GO_PARENT") == "" {
+	if !found && os.Getenv("PILOTHOUSE_TEST_NO_GO_PARENT") == "" {
 		t.Errorf("no `go` in ancestry: %+v", anc)
 	}
 	if got, _ := Ancestors(os.Getpid(), 1); len(got) != 1 {

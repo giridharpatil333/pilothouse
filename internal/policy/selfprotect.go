@@ -6,18 +6,18 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // SelfProtectionRule is the name of the built-in rule that makes a person
-// confirm any attempt by an agent to administer Askgate or edit the files
-// that configure Askgate and the agents. It is evaluated before every
+// confirm any attempt by an agent to administer Pilothouse or edit the files
+// that configure Pilothouse and the agents. It is evaluated before every
 // other rule, cannot be disabled, and — because ask outranks allow — no
 // allow rule or session grant can silence it. Only a deny rule can make
 // the outcome stricter.
-const SelfProtectionRule = "askgate-self-protection"
+const SelfProtectionRule = "pilothouse-self-protection"
 
-// adminCommands are askgate subcommands that approve requests, change
+// adminCommands are pilothouse subcommands that approve requests, change
 // rules, routing, pairing or hooks. Reaching any of these from inside an
 // agent is how an agent would approve itself.
 var adminCommands = map[string]bool{
@@ -26,12 +26,12 @@ var adminCommands = map[string]bool{
 	"auto": true, "stop": true, "open": true, "setup": true,
 }
 
-// readOnlyPolicy are `askgate policy` subcommands that only read: an agent
+// readOnlyPolicy are `pilothouse policy` subcommands that only read: an agent
 // helping someone write rules may run them freely.
 var readOnlyPolicy = map[string]bool{"check": true, "test": true, "status": true, "replay": true, "help": true}
 
-// otherCommands are the remaining askgate subcommands; seeing one ends the
-// search for a subcommand (so `askgate log --grep approve` is not a hit).
+// otherCommands are the remaining pilothouse subcommands; seeing one ends the
+// search for a subcommand (so `pilothouse log --grep approve` is not a hit).
 var otherCommands = map[string]bool{
 	"ls": true, "log": true, "explain": true, "version": true, "status": true, "doctor": true,
 	"help": true, "completion": true, "hook": true, "attach": true, "task": true, "daemon": true,
@@ -74,7 +74,7 @@ var interpreters = map[string]bool{
 }
 
 // readers only read their arguments, so naming a protected file is fine
-// (`cat ~/.askgate/config.yaml`). Some can write with a flag; those flags
+// (`cat ~/.pilothouse/config.yaml`). Some can write with a flag; those flags
 // are listed in readerWriteFlags and turn the reader into a writer.
 var readers = map[string]bool{
 	"cat": true, "less": true, "more": true, "head": true, "tail": true, "ls": true, "stat": true,
@@ -98,7 +98,7 @@ var readerWriteFlags = map[string][]string{
 // spAnalyzer inspects one tool call for the self-protection rule.
 type spAnalyzer struct {
 	home        string
-	askgateHome string
+	pilothouseHome string
 	roots       []string // protected roots: absolute, cleaned, folded
 	raw         string
 	indirect    bool   // the line feeds text to an interpreter
@@ -119,7 +119,7 @@ func selfProtection(c *evalCtx) (bool, string) {
 	if kind == api.ToolRead || kind == api.ToolWeb {
 		return false, ""
 	}
-	a := &spAnalyzer{home: c.home, askgateHome: c.eng.askgateHome, raw: c.in.Command}
+	a := &spAnalyzer{home: c.home, pilothouseHome: c.eng.pilothouseHome, raw: c.in.Command}
 	if c.in.Command != "" {
 		a.roots = c.protectedRoots()
 		a.analyze(c.in.Command, c.cwd, 0)
@@ -130,7 +130,7 @@ func selfProtection(c *evalCtx) (bool, string) {
 	if a.reason == "" && kind != api.ToolShell {
 		for _, p := range c.absPaths() {
 			if c.isProtected(p) {
-				a.hit("edits %s, which configures Askgate or an agent", tildePath(p, c.home))
+				a.hit("edits %s, which configures Pilothouse or an agent", tildePath(p, c.home))
 				break
 			}
 		}
@@ -138,7 +138,7 @@ func selfProtection(c *evalCtx) (bool, string) {
 	if a.reason == "" {
 		return false, ""
 	}
-	return true, "Askgate self-protection: this " + a.reason + ". A person must confirm it."
+	return true, "Pilothouse self-protection: this " + a.reason + ". A person must confirm it."
 }
 
 func (a *spAnalyzer) analyze(s, cwd string, depth int) {
@@ -158,7 +158,7 @@ func (a *spAnalyzer) analyze(s, cwd string, depth int) {
 }
 
 // command analyses one simple command. cwd tracks `cd` so that
-// `cd ~/.askgate && rm policy.yaml` resolves correctly.
+// `cd ~/.pilothouse && rm policy.yaml` resolves correctly.
 func (a *spAnalyzer) command(cmd *shCmd, cwd *string, depth int) {
 	for _, r := range cmd.redirs {
 		if !strings.ContainsRune(r.op, '>') {
@@ -202,8 +202,8 @@ func (a *spAnalyzer) command(cmd *shCmd, cwd *string, depth int) {
 	w, args := words[i], words[i+1:]
 	base := cmdBase(w)
 	switch {
-	case base == "askgate":
-		a.askgate(args, viaXargs, *cwd, depth)
+	case base == "pilothouse":
+		a.pilothouse(args, viaXargs, *cwd, depth)
 		return
 	case shells[base]:
 		a.shell(cmd, args, *cwd, depth)
@@ -224,10 +224,10 @@ func (a *spAnalyzer) command(cmd *shCmd, cwd *string, depth int) {
 		a.indirect = true
 	case strings.ContainsRune(w, '$'):
 		// The program is computed at run time ("$AG approve"); if the line
-		// mentions askgate at all, fall back to the whole-line scan.
-		if strings.Contains(strings.ToLower(a.raw), "askgate") {
+		// mentions pilothouse at all, fall back to the whole-line scan.
+		if strings.Contains(strings.ToLower(a.raw), "pilothouse") {
 			if sub := firstNonFlag(args); adminCommands[sub] {
-				a.hit("runs a computed command (%s %s) on a line that mentions askgate", w, sub)
+				a.hit("runs a computed command (%s %s) on a line that mentions pilothouse", w, sub)
 				return
 			}
 			a.indirect = true
@@ -244,8 +244,8 @@ func (a *spAnalyzer) command(cmd *shCmd, cwd *string, depth int) {
 	}
 }
 
-// askgate checks an askgate invocation for an admin subcommand.
-func (a *spAnalyzer) askgate(args []string, viaXargs bool, cwd string, depth int) {
+// pilothouse checks an pilothouse invocation for an admin subcommand.
+func (a *spAnalyzer) pilothouse(args []string, viaXargs bool, cwd string, depth int) {
 	unknown := 0
 	for j := 0; j < len(args); j++ {
 		w := args[j]
@@ -258,11 +258,11 @@ func (a *spAnalyzer) askgate(args []string, viaXargs bool, cwd string, depth int
 					return
 				}
 			}
-			a.hit("runs `askgate %s`", w)
+			a.hit("runs `pilothouse %s`", w)
 			return
 		}
 		if w == "run" {
-			// `askgate run [-n name] [-d] [--task id] [--] cmd…`
+			// `pilothouse run [-n name] [-d] [--task id] [--] cmd…`
 			rest := skipOptions(args, j+1, map[string]bool{"-n": true, "--name": true, "--task": true})
 			a.analyze(shellJoin(args[rest:]), cwd, depth+1)
 			return
@@ -276,8 +276,8 @@ func (a *spAnalyzer) askgate(args []string, viaXargs bool, cwd string, depth int
 		}
 	}
 	if viaXargs {
-		// `… | xargs askgate`: the subcommand arrives on stdin.
-		a.hit("runs askgate with arguments supplied by xargs")
+		// `… | xargs pilothouse`: the subcommand arrives on stdin.
+		a.hit("runs pilothouse with arguments supplied by xargs")
 	}
 }
 
@@ -361,7 +361,7 @@ func (a *spAnalyzer) findExec(args []string, cwd string, depth int) {
 
 // looseScan is the conservative fallback for lines that feed text to an
 // interpreter (`| sh`, `python -c`, `osascript -e`): it looks for an
-// askgate admin invocation or a protected path anywhere in the text,
+// pilothouse admin invocation or a protected path anywhere in the text,
 // quoted or not.
 func (a *spAnalyzer) looseScan() {
 	norm := strings.Map(func(r rune) rune {
@@ -374,7 +374,7 @@ func (a *spAnalyzer) looseScan() {
 		return unicode.IsSpace(r) || strings.ContainsRune(";&|()<>`$={},[]", r)
 	})
 	for i, f := range fields {
-		if cmdBase(f) != "askgate" {
+		if cmdBase(f) != "pilothouse" {
 			continue
 		}
 		for j := i + 1; j < len(fields) && j <= i+3; j++ {
@@ -383,7 +383,7 @@ func (a *spAnalyzer) looseScan() {
 				continue
 			}
 			if adminCommands[g] && !(g == "policy" && j+1 < len(fields) && readOnlyPolicy[fields[j+1]]) {
-				a.hit("passes `askgate %s` to an interpreter", g)
+				a.hit("passes `pilothouse %s` to an interpreter", g)
 				return
 			}
 			break
@@ -436,10 +436,10 @@ func (a *spAnalyzer) protectedArg(arg, cwd string) (string, bool) {
 }
 
 func (a *spAnalyzer) expandVars(w string) string {
-	if a.askgateHome != "" {
-		for _, v := range []string{"${ASKGATE_HOME}", "$ASKGATE_HOME"} {
+	if a.pilothouseHome != "" {
+		for _, v := range []string{"${PILOTHOUSE_HOME}", "$PILOTHOUSE_HOME"} {
 			if w == v || strings.HasPrefix(w, v+"/") {
-				return a.askgateHome + w[len(v):]
+				return a.pilothouseHome + w[len(v):]
 			}
 		}
 	}

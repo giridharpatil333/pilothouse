@@ -19,7 +19,7 @@ func Diff(name string, before, after string) string {
 	a, b := splitLines(before), splitLines(after)
 	ops := lineOps(a, b)
 	var out strings.Builder
-	fmt.Fprintf(&out, "--- %s\n+++ %s (askgate)\n", name, name)
+	fmt.Fprintf(&out, "--- %s\n+++ %s (pilothouse)\n", name, name)
 	const ctx = 3
 	for i := 0; i < len(ops); {
 		if ops[i].kind == ' ' {

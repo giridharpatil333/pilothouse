@@ -163,7 +163,7 @@ func (d *CommandDetector) Idle() (time.Duration, bool) {
 	return d.idle, true
 }
 
-// Err returns the error of the last probe, for `askgate doctor`.
+// Err returns the error of the last probe, for `pilothouse doctor`.
 func (d *CommandDetector) Err() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()

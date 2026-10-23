@@ -144,7 +144,7 @@ func TestApplyTrustEmptyAndMissingNewline(t *testing.T) {
 		t.Errorf("empty file: %q", out)
 	}
 	out, _ = applyTrust(`model = "x"`, edit)
-	if !strings.HasPrefix(out, "model = \"x\"\n\n# askgate-managed") {
+	if !strings.HasPrefix(out, "model = \"x\"\n\n# pilothouse-managed") {
 		t.Errorf("no trailing newline: %q", out)
 	}
 	if back, _ := applyTrust(out, trustEdit{}); back != "model = \"x\"\n" {

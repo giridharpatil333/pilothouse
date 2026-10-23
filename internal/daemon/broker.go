@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/core"
-	"github.com/xasdta/askgate/internal/store"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/core"
+	"github.com/xasdta/pilothouse/internal/store"
 )
 
 // liveBuffer is how many events a subscriber may fall behind before it is

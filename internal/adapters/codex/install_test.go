@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/hookkit"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/hookkit"
 )
 
 const userHooks = `{
@@ -38,7 +38,7 @@ hooks = true # on by default anyway
 
 func fakeShim(t *testing.T) string {
 	t.Helper()
-	p := filepath.Join(t.TempDir(), "askgate")
+	p := filepath.Join(t.TempDir(), "pilothouse")
 	if err := os.WriteFile(p, []byte("#!/bin/sh\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}

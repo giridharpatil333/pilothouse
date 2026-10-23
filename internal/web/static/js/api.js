@@ -10,7 +10,7 @@ export class ApiError extends Error {
 
 export async function api(method, path, body) {
   const opts = { method, credentials: 'same-origin', headers: {} };
-  if (method !== 'GET' && method !== 'HEAD') opts.headers['X-Askgate'] = '1';
+  if (method !== 'GET' && method !== 'HEAD') opts.headers['X-Pilothouse'] = '1';
   if (body !== undefined) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);

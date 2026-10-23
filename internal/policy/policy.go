@@ -3,9 +3,9 @@
 //
 // Rules come from three places, evaluated in this order:
 //
-//  1. Built-in rules (askgate-self-protection), always on.
-//  2. The user file, ~/.askgate/policy.yaml.
-//  3. The repo file, <repo>/.askgate/policy.yaml, discovered from
+//  1. Built-in rules (pilothouse-self-protection), always on.
+//  2. The user file, ~/.pilothouse/policy.yaml.
+//  3. The repo file, <repo>/.pilothouse/policy.yaml, discovered from
 //     Input.Repo at evaluation time. Repos not listed in
 //     trusted-repos.yaml may only add deny and ask rules: an agent can
 //     write to the repo it works in, so an untrusted repo file must not
@@ -33,8 +33,8 @@ import (
 	"cel.dev/cel-go/common/types"
 	"cel.dev/cel-go/common/types/ref"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 // Input describes one tool call.
@@ -78,13 +78,13 @@ type Options struct {
 	UserFile         string   // paths.Policy()
 	TrustedReposFile string   // paths.TrustedRepos()
 	ProtectedPaths   []string // from every adapter + paths.Home()
-	// AskgateHome lets the self-protection rule resolve $ASKGATE_HOME in
+	// PilothouseHome lets the self-protection rule resolve $PILOTHOUSE_HOME in
 	// shell commands. Optional.
-	AskgateHome string
+	PilothouseHome string
 }
 
 // DefaultOptions returns the standard locations. extraProtected are the
-// adapters' ProtectedPaths(); the Askgate home and socket directory are
+// adapters' ProtectedPaths(); the Pilothouse home and socket directory are
 // always protected.
 func DefaultOptions(extraProtected ...string) Options {
 	prot := []string{paths.Home(), paths.Run()}
@@ -97,7 +97,7 @@ func DefaultOptions(extraProtected ...string) Options {
 		UserFile:         paths.Policy(),
 		TrustedReposFile: paths.TrustedRepos(),
 		ProtectedPaths:   prot,
-		AskgateHome:      paths.Home(),
+		PilothouseHome:      paths.Home(),
 	}
 }
 
@@ -110,7 +110,7 @@ const (
 )
 
 // RepoPolicyFile is the repo policy location relative to the repo root.
-const RepoPolicyFile = ".askgate/policy.yaml"
+const RepoPolicyFile = ".pilothouse/policy.yaml"
 
 const (
 	recheckEvery = 2 * time.Second // disk re-stat interval per file
@@ -121,7 +121,7 @@ const (
 type Engine struct {
 	opts        Options
 	home        string
-	askgateHome string
+	pilothouseHome string
 	protected   []string // folded absolute roots, symlinks resolved too
 	builtin     []*rule
 	user        *slot[[]*rule]
@@ -153,7 +153,7 @@ func Load(opts Options) (*Engine, api.PolicyStatus) {
 	e := &Engine{
 		opts:        opts,
 		home:        paths.UserHome(),
-		askgateHome: opts.AskgateHome,
+		pilothouseHome: opts.PilothouseHome,
 		repos:       map[string]*repoState{},
 		rootsByBase: map[string][]string{},
 		symDirs:     map[string]symEntry{},
@@ -162,7 +162,7 @@ func Load(opts Options) (*Engine, api.PolicyStatus) {
 	e.protected = e.protectedRoots(opts.ProtectedPaths)
 	e.builtin = []*rule{{
 		name:        SelfProtectionRule,
-		description: "Agents must not administer Askgate or edit Askgate/agent settings without a person",
+		description: "Agents must not administer Pilothouse or edit Pilothouse/agent settings without a person",
 		action:      api.BehaviorAsk,
 		check:       selfProtection,
 	}}
@@ -313,7 +313,7 @@ func (d *decider) apply(c *evalCtx, rules []*rule, file string, trusted bool) {
 		}
 		m := Match{Rule: r.name, File: file, Action: r.action}
 		if !trusted && r.action == api.BehaviorAllow {
-			m.Ignored = "allow rule in untrusted repo (run `askgate policy trust` to enable)"
+			m.Ignored = "allow rule in untrusted repo (run `pilothouse policy trust` to enable)"
 			d.res.Matched = append(d.res.Matched, m)
 			continue
 		}
@@ -335,9 +335,9 @@ func (r *rule) messageFor(dynamic string) string {
 	case r.message != "":
 		return r.message
 	case r.action == api.BehaviorDeny:
-		return fmt.Sprintf("Blocked by Askgate policy rule %q.", r.name)
+		return fmt.Sprintf("Blocked by Pilothouse policy rule %q.", r.name)
 	case r.action == api.BehaviorAsk:
-		return fmt.Sprintf("Askgate policy rule %q asks a person to confirm this.", r.name)
+		return fmt.Sprintf("Pilothouse policy rule %q asks a person to confirm this.", r.name)
 	}
 	return ""
 }
@@ -471,7 +471,7 @@ func (c *evalCtx) matchField(fm *fieldMatch) bool {
 }
 
 // protectedRoots adds the per-repo settings files to the engine-wide
-// protected paths: the repo's own Askgate policy (an agent could delete
+// protected paths: the repo's own Pilothouse policy (an agent could delete
 // a deny rule from it) and project-level agent settings (which can grant
 // permissions).
 func (c *evalCtx) protectedRoots() []string {
@@ -500,7 +500,7 @@ func (e *Engine) rootsFor(base string) []string {
 		return r
 	}
 	r = append(slices.Clip(e.protected),
-		foldPath(filepath.Join(base, ".askgate")),
+		foldPath(filepath.Join(base, ".pilothouse")),
 		foldPath(filepath.Join(base, ".claude", "settings.json")),
 		foldPath(filepath.Join(base, ".claude", "settings.local.json")),
 		foldPath(filepath.Join(base, ".codex", "config.toml")),

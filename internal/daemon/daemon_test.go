@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/core"
-	"github.com/xasdta/askgate/internal/paths"
-	"github.com/xasdta/askgate/internal/store"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/core"
+	"github.com/xasdta/pilothouse/internal/paths"
+	"github.com/xasdta/pilothouse/internal/store"
 )
 
 var bg = context.Background()
@@ -596,7 +596,7 @@ func TestRestartPreservesDataAndReleasesHeld(t *testing.T) {
 	if r.Status != api.RequestSteppedAside {
 		t.Fatalf("request after restart = %s, want stepped_aside", r.Status)
 	}
-	if _, err := os.Stat(filepath.Join(paths.Home(), "askgate.db")); err != nil {
+	if _, err := os.Stat(filepath.Join(paths.Home(), "pilothouse.db")); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -674,7 +674,7 @@ func BenchmarkPreToolRoundTrip(b *testing.B) {
 }
 
 // TestRealPolicyFile drives pre_tool through the real policy engine and a
-// policy file in the temporary Askgate home.
+// policy file in the temporary Pilothouse home.
 func TestRealPolicyFile(t *testing.T) {
 	h := newHarness(t)
 	h.opts = func(o *Options) { o.LoadPolicy = nil }

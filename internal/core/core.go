@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 var (

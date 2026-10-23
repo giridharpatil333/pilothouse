@@ -13,21 +13,21 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/config"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/config"
 )
 
 func rmtIsolate(t *testing.T) {
 	t.Helper()
-	t.Setenv("ASKGATE_HOME", t.TempDir())
-	t.Setenv("ASKGATE_USER_HOME", t.TempDir())
+	t.Setenv("PILOTHOUSE_HOME", t.TempDir())
+	t.Setenv("PILOTHOUSE_USER_HOME", t.TempDir())
 	run, err := os.MkdirTemp("/tmp", "ag")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(run) })
-	t.Setenv("ASKGATE_RUN_DIR", run)
+	t.Setenv("PILOTHOUSE_RUN_DIR", run)
 	oldClient, oldOpen, oldTS, oldNow := rmtClient, rmtOpenBrowser, rmtTailscale, rmtNow
 	t.Cleanup(func() { rmtClient, rmtOpenBrowser, rmtTailscale, rmtNow = oldClient, oldOpen, oldTS, oldNow })
 }
@@ -96,7 +96,7 @@ func TestPairCommand(t *testing.T) {
 	// Local only: a clear warning, no QR.
 	f.pair.Remote, f.pair.URL = false, "http://127.0.0.1:7517/pair#K7QF-M2XA-P9TT"
 	out, _ = rmtRun(t, newPairCmd(), "--no-wait")
-	if !strings.Contains(out, "askgate remote tailscale") || strings.Contains(out, "▀") {
+	if !strings.Contains(out, "pilothouse remote tailscale") || strings.Contains(out, "▀") {
 		t.Errorf("local-only output:\n%s", out)
 	}
 
@@ -147,7 +147,7 @@ func TestDevicesCommand(t *testing.T) {
 		t.Fatalf("revoke: %v %v\n%s", err, f.revoked, out)
 	}
 	f.devices = nil
-	if out, _ := rmtRun(t, newDevicesCmd()); !strings.Contains(out, "askgate pair") {
+	if out, _ := rmtRun(t, newDevicesCmd()); !strings.Contains(out, "pilothouse pair") {
 		t.Fatalf("empty: %s", out)
 	}
 }
@@ -242,7 +242,7 @@ func TestRemoteTailscale(t *testing.T) {
 	if got.Web.PublicURL != "https://mac.tail1.ts.net" || got.Web.Addr != "127.0.0.1:7600" {
 		t.Fatalf("config = %+v", got.Web)
 	}
-	if !strings.Contains(out, "askgate pair") {
+	if !strings.Contains(out, "pilothouse pair") {
 		t.Errorf("no next step:\n%s", out)
 	}
 

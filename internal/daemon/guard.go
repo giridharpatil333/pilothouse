@@ -5,8 +5,8 @@ import (
 	"net"
 	"path/filepath"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/proc"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/proc"
 )
 
 // PeerGuard vets the process on the other end of a Unix-socket connection
@@ -17,7 +17,7 @@ type PeerGuard func(c net.Conn) error
 
 // ProcessGuard is the default PeerGuard (BUILD-SPEC invariant 5): it
 // rejects callers whose process, or any ancestor of it, is a coding agent,
-// so an agent cannot approve its own requests by running `askgate approve`.
+// so an agent cannot approve its own requests by running `pilothouse approve`.
 // It fails closed: a caller whose ancestry cannot be inspected is rejected.
 func ProcessGuard(ads []adapters.Adapter) PeerGuard {
 	names := map[string]bool{}

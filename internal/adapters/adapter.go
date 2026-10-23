@@ -1,4 +1,4 @@
-// Package adapters defines how Askgate talks to one coding agent: reading
+// Package adapters defines how Pilothouse talks to one coding agent: reading
 // its hook payloads, answering them, and installing hooks into its settings.
 // Each agent lives in its own subpackage; internal/adapters/all lists them.
 package adapters
@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // Proc is one process in the hook shim's ancestry.
@@ -18,7 +18,7 @@ type Proc struct {
 	Args string `json:"args,omitempty"`
 }
 
-// HookEnvelope is what the `askgate hook <agent>` shim sends to the daemon
+// HookEnvelope is what the `pilothouse hook <agent>` shim sends to the daemon
 // (POST /v1/hook on the Unix socket). The shim adds process context the
 // agent's own payload lacks.
 type HookEnvelope struct {
@@ -27,10 +27,10 @@ type HookEnvelope struct {
 	Payload          json.RawMessage   `json:"payload"`         // stdin, verbatim
 	ShimPID          int               `json:"shim_pid"`
 	Ancestors        []Proc            `json:"ancestors"`                    // nearest first, up to 12
-	AskgateSessionID string            `json:"askgate_session_id,omitempty"` // $ASKGATE_SESSION_ID (wrapped sessions)
+	PilothouseSessionID string            `json:"pilothouse_session_id,omitempty"` // $PILOTHOUSE_SESSION_ID (wrapped sessions)
 	Cwd              string            `json:"cwd"`
 	TTY              string            `json:"tty,omitempty"`
-	Env              map[string]string `json:"env,omitempty"` // allow-listed: TERM_PROGRAM, TMUX, ASKGATE_TASK_ID, ...
+	Env              map[string]string `json:"env,omitempty"` // allow-listed: TERM_PROGRAM, TMUX, PILOTHOUSE_TASK_ID, ...
 	ReceivedAt       time.Time         `json:"received_at"`
 }
 
@@ -71,7 +71,7 @@ type HookEvent struct {
 }
 
 // HookOutcome is what the daemon decided for one hook call.
-// Behavior "" means "no opinion": the agent carries on as if Askgate were absent.
+// Behavior "" means "no opinion": the agent carries on as if Pilothouse were absent.
 type HookOutcome struct {
 	Behavior api.Behavior // allow | deny | ask | ""
 	Message  string       // reason shown to the agent / user
@@ -97,7 +97,7 @@ type Detection struct {
 
 // InstallOptions controls hook installation.
 type InstallOptions struct {
-	// ShimPath is the absolute path of the askgate binary to call.
+	// ShimPath is the absolute path of the pilothouse binary to call.
 	ShimPath string
 	// DryRun computes the change without writing.
 	DryRun bool
@@ -116,11 +116,11 @@ type Change struct {
 	More []Change `json:"more,omitempty"`
 }
 
-// HookStatus reports whether Askgate's hooks are installed and current.
+// HookStatus reports whether Pilothouse's hooks are installed and current.
 type HookStatus struct {
 	Installed bool     `json:"installed"`
 	Current   bool     `json:"current"` // installed and matches what InstallHooks would write
-	Events    []string `json:"events"`  // vendor events wired to askgate
+	Events    []string `json:"events"`  // vendor events wired to pilothouse
 	Path      string   `json:"path"`
 	Problems  []string `json:"problems,omitempty"`
 }

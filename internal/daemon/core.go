@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/core"
-	"github.com/xasdta/askgate/internal/state"
-	"github.com/xasdta/askgate/internal/store"
-	"github.com/xasdta/askgate/internal/version"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/core"
+	"github.com/xasdta/pilothouse/internal/state"
+	"github.com/xasdta/pilothouse/internal/store"
+	"github.com/xasdta/pilothouse/internal/version"
 )
 
 // Snapshot window sizes (BUILD-SPEC §4).

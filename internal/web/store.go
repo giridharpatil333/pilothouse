@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // migrations are numbered and applied once each, recorded in

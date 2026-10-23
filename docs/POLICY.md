@@ -1,6 +1,6 @@
-# Askgate policy
+# Pilothouse policy
 
-Askgate checks every tool call an agent is about to make against your rules,
+Pilothouse checks every tool call an agent is about to make against your rules,
 **before** it runs. A rule can:
 
 | action  | effect |
@@ -9,8 +9,8 @@ Askgate checks every tool call an agent is about to make against your rules,
 | `ask`   | A person must confirm. At the desk that is the agent's own permission prompt; when you're away it is routed to your paired phone. |
 | `allow` | The agent's own permission prompt is skipped. |
 
-No matching rule means Askgate has no opinion and the agent's own permission
-settings apply, exactly as if Askgate weren't installed.
+No matching rule means Pilothouse has no opinion and the agent's own permission
+settings apply, exactly as if Pilothouse weren't installed.
 
 Policy runs at the agent's pre-tool hook (Claude Code `PreToolUse`; for Codex
 see [AGENTS.md](AGENTS.md) for what its hooks support). It is a fast rules
@@ -25,7 +25,7 @@ matters.
 - [Conditions with CEL](#conditions-with-cel-when)
 - [Precedence](#precedence)
 - [Repo policies and trust](#repo-policies-and-trust)
-- [Built-in rule: askgate-self-protection](#built-in-rule-askgate-self-protection)
+- [Built-in rule: pilothouse-self-protection](#built-in-rule-pilothouse-self-protection)
 - [Reloading and errors](#reloading-and-errors)
 - [CLI](#cli)
 - [Limits](#limits)
@@ -33,11 +33,11 @@ matters.
 ## Quick start
 
 ```sh
-askgate policy init            # writes ~/.askgate/policy.yaml with working examples
-$EDITOR ~/.askgate/policy.yaml
-askgate policy check           # validates; errors come with line numbers
-askgate policy test --command "git push --force origin main"
-askgate policy replay --since 7d   # what would your new rules have changed?
+pilothouse policy init            # writes ~/.pilothouse/policy.yaml with working examples
+$EDITOR ~/.pilothouse/policy.yaml
+pilothouse policy check           # validates; errors come with line numbers
+pilothouse policy test --command "git push --force origin main"
+pilothouse policy replay --since 7d   # what would your new rules have changed?
 ```
 
 The starter file blocks force-pushes, `rm -rf /`-style deletes and reads of
@@ -49,9 +49,9 @@ example to copy from.
 
 Rules are evaluated from three sources, in this order:
 
-1. **Built-in** — `askgate-self-protection`, always on (see [below](#built-in-rule-askgate-self-protection)).
-2. **Your file** — `~/.askgate/policy.yaml` (`$ASKGATE_HOME/policy.yaml`).
-3. **The repo's file** — `<repo root>/.askgate/policy.yaml`, for calls made
+1. **Built-in** — `pilothouse-self-protection`, always on (see [below](#built-in-rule-pilothouse-self-protection)).
+2. **Your file** — `~/.pilothouse/policy.yaml` (`$PILOTHOUSE_HOME/policy.yaml`).
+3. **The repo's file** — `<repo root>/.pilothouse/policy.yaml`, for calls made
    inside that git repository. Allow rules here only count if you trust the
    repo (see [trust](#repo-policies-and-trust)).
 
@@ -76,7 +76,7 @@ rules:
 |---|---|---|
 | `version` | yes | Must be `1`. |
 | `rules` | no | List of rules. An empty or missing list is valid. |
-| `name` | yes | Unique within the file. Names starting with `askgate-` are reserved. |
+| `name` | yes | Unique within the file. Names starting with `pilothouse-` are reserved. |
 | `description` | no | Free text. |
 | `match` | one of `match`/`when` | Map of field → glob (or list of globs, meaning "any of"). All fields must match. |
 | `when` | one of `match`/`when` | A [CEL](https://cel.dev) expression that must be true. |
@@ -157,7 +157,7 @@ Variables:
 | `path` | string | first of `paths`, or `""` |
 | `input` | map | the raw tool input JSON object (`input.file_path`, `input.url`, …) |
 | `cwd`, `repo`, `branch` | string | session context (`repo`/`branch` empty outside git) |
-| `mode` | string | `observed` (hooks) or `wrapped` (`askgate run`) |
+| `mode` | string | `observed` (hooks) or `wrapped` (`pilothouse run`) |
 | `checkpoint` | string | `pre_tool` |
 | `hour` | int | local hour, 0–23 |
 | `weekday` | int | 0 = Sunday … 6 = Saturday |
@@ -212,7 +212,7 @@ when: 'command.lowerAscii().contains("drop table")'
 
 `input` keys depend on the agent and tool; use `has(input.x)` before reading
 an optional key. A `when:` that fails at run time (missing key, wrong type)
-counts as **not matching** and is listed as ignored in `askgate policy test`
+counts as **not matching** and is listed as ignored in `pilothouse policy test`
 — so don't write deny rules that depend on a key being present without
 `has()`. Each evaluation has a CEL cost limit so a pathological expression
 can't stall the hook.
@@ -222,11 +222,11 @@ can't stall the hook.
 1. If any matching rule says **deny**, the call is denied.
 2. Otherwise, if any says **ask**, a person is asked.
 3. Otherwise, if any says **allow**, it is allowed.
-4. Otherwise Askgate has no opinion.
+4. Otherwise Pilothouse has no opinion.
 
 The *deciding rule* is the first rule with the winning action, in order
 built-in → your file → repo file, top to bottom; its `message` is used. Every
-matching rule is reported (`askgate policy test`, the `policy.decision`
+matching rule is reported (`pilothouse policy test`, the `policy.decision`
 event), including ones that were ignored and why.
 
 Session grants ("allow for this session" answers) are applied by the daemon
@@ -234,7 +234,7 @@ after deny and ask rules, so they can never override a deny or an ask.
 
 ## Repo policies and trust
 
-A repository can ship rules in `<repo>/.askgate/policy.yaml`, discovered
+A repository can ship rules in `<repo>/.pilothouse/policy.yaml`, discovered
 automatically when an agent works in that repo.
 
 Because an agent can write to the repo it works in — and anyone can publish a
@@ -243,64 +243,64 @@ apply, but their `allow` rules are ignored (and shown as such). Once you have
 read a repo's policy and want its allow rules too:
 
 ```sh
-askgate policy trust          # the current git repo
-askgate policy trust ~/src/app
-askgate policy untrust        # back to deny/ask only
+pilothouse policy trust          # the current git repo
+pilothouse policy trust ~/src/app
+pilothouse policy untrust        # back to deny/ask only
 ```
 
-Trust is stored in `~/.askgate/trusted-repos.yaml` (symlinks resolved). The
+Trust is stored in `~/.pilothouse/trusted-repos.yaml` (symlinks resolved). The
 self-protection rule makes a person confirm any agent edit to that file, to
-your user policy, and to the repo's own `.askgate/` directory.
+your user policy, and to the repo's own `.pilothouse/` directory.
 
-## Built-in rule: `askgate-self-protection`
+## Built-in rule: `pilothouse-self-protection`
 
 Agents must not be able to approve their own requests or loosen your rules.
 The daemon enforces that at the socket (an `approve` from inside an agent's
 process tree is rejected). On top of that, this built-in rule makes a person
 confirm (`ask`) any tool call that:
 
-- **runs an askgate admin command**: `approve`, `deny`, `policy`
+- **runs an pilothouse admin command**: `approve`, `deny`, `policy`
   (except the read-only `policy check|test|status|replay`), `pair`,
   `devices`, `remote`, `service`, `hooks`, `here`, `away`, `auto`, `stop`,
   `open`, `setup`; or
-- **writes to a protected path**: the Askgate home (`~/.askgate/**`, including
+- **writes to a protected path**: the Pilothouse home (`~/.pilothouse/**`, including
   the database, keys, policy and trust list), the socket directory, each
   agent's settings files (`~/.claude/settings.json`, `~/.codex/config.toml`,
-  …), and in the current repo `.askgate/**`, `.claude/settings.json`,
+  …), and in the current repo `.pilothouse/**`, `.claude/settings.json`,
   `.claude/settings.local.json` and `.codex/config.toml`.
 
 It cannot be turned off, and because ask outranks allow, no allow rule or
 session grant silences it. A deny rule can still make it stricter.
 
-How commands are recognised. Askgate reads the command line like a shell
+How commands are recognised. Pilothouse reads the command line like a shell
 would — quotes, escapes, `$'…'` strings, `;`, `&&`, `||`, `|`, subshells,
 `{ …; }`, `$(…)`, backticks, `<(…)`, redirections — and then finds what each
 simple command actually runs. It sees through:
 
-- paths and spelling: `./askgate`, `/usr/local/bin/askgate`, `"askgate"`,
-  `ask''gate`, `a\skgate`, `$'\x61skgate'`, `ASKGATE` (case-insensitive file systems);
+- paths and spelling: `./pilothouse`, `/usr/local/bin/pilothouse`, `"pilothouse"`,
+  `ask''gate`, `a\skgate`, `$'\x61skgate'`, `PILOTHOUSE` (case-insensitive file systems);
 - wrappers: `env [-i] [-u X] X=1`, `env -S "…"`, leading `X=1`, `sudo`,
   `doas`, `nohup`, `time`, `command`, `exec`, `nice`, `timeout`, `xargs`,
   `stdbuf`, `caffeinate`, `busybox`, `if/then/do …`;
 - nested shells: `sh|bash|zsh|… -c "…"`, here-strings `bash <<< "…"`,
-  `eval "…"`, `find -exec …`, `askgate run -- …`;
+  `eval "…"`, `find -exec …`, `pilothouse run -- …`;
 - writes: redirections (`>`, `>>`, `>|`, `&>`, `2>`, `>&`), and any command
   that is not a known read-only tool (`cat`, `less`, `grep`, `ls`, `sed`
   without `-i`, `sort` without `-o`, `find` without `-delete/-exec`, …)
   given a protected path — including `cp`, `mv`, `rm`, `tee`, `ln`,
   `chmod`, `dd of=`, `sqlite3`, editors, and `curl --unix-socket` to the
-  Askgate socket. `cd` earlier in the line is followed, and `~`, `$HOME` and
-  `$ASKGATE_HOME` are expanded.
+  Pilothouse socket. `cd` earlier in the line is followed, and `~`, `$HOME` and
+  `$PILOTHOUSE_HOME` are expanded.
 
 For edit tools the target paths are resolved through symlinks.
 
-**Decision: text is not a command.** `echo askgate approve r_1`,
-`git commit -m "askgate approve: fix"` and `grep "askgate approve" docs/` do
+**Decision: text is not a command.** `echo pilothouse approve r_1`,
+`git commit -m "pilothouse approve: fix"` and `grep "pilothouse approve" docs/` do
 **not** trigger the rule: the words are arguments, not an invocation, and
-flagging them would make working on anything that mentions Askgate
+flagging them would make working on anything that mentions Pilothouse
 miserable. The exception is a line that feeds text to an interpreter —
 `… | sh`, `bash -s`, `python -c`, `node -e`, `osascript -e`, `awk`,
-`source`, a computed command such as `$CMD approve` — where Askgate cannot
+`source`, a computed command such as `$CMD approve` — where Pilothouse cannot
 follow the code and instead scans the whole line, quoted or not, for an
 admin invocation or a protected path.
 
@@ -319,24 +319,24 @@ dynamically, other users' homes, and anything outside the tool call itself.
   that file compiled, its rules stay in force until you fix the error — a
   typo never silently drops your deny rules. If it never compiled, none of
   its rules apply. Either way the error (with line numbers) is shown by
-  `askgate policy status` and `askgate policy check`.
+  `pilothouse policy status` and `pilothouse policy check`.
 - Deleting a file removes its rules.
 - The built-in rule works even if every file is broken.
 
 ## CLI
 
 ```
-askgate policy init [--force]          starter ~/.askgate/policy.yaml (--force keeps a .bak-<time> copy)
-askgate policy check [file]            validate (default: your file + this repo's); exit 1 on errors
-askgate policy test [flags]            what would happen to one call
+pilothouse policy init [--force]          starter ~/.pilothouse/policy.yaml (--force keeps a .bak-<time> copy)
+pilothouse policy check [file]            validate (default: your file + this repo's); exit 1 on errors
+pilothouse policy test [flags]            what would happen to one call
     --command "…"  --path p (repeatable)  --tool Bash  --kind shell|edit|read|web|mcp|other
     --agent claude|codex|generic  --cwd dir  --repo dir  --branch b  --mode observed|wrapped
     --input '{json}'  --json
-askgate policy replay [--since 7d] [--all] [--json]
+pilothouse policy replay [--since 7d] [--all] [--json]
                                         re-run logged pre_tool calls with today's files; show changes
-askgate policy trust [repo]            allow rules in that repo's policy apply (default: current repo)
-askgate policy untrust [repo]
-askgate policy status [--json]         loaded files, rule counts, errors, trusted repos
+pilothouse policy trust [repo]            allow rules in that repo's policy apply (default: current repo)
+pilothouse policy untrust [repo]
+pilothouse policy status [--json]         loaded files, rule counts, errors, trusted repos
 ```
 
 `policy test` infers what it can: `--command` alone means a `Bash` (Claude)

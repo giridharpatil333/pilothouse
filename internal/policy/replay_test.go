@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 func hookEvent(t *testing.T, seq int64, at time.Time, sid string, he adapters.HookEvent) api.Event {

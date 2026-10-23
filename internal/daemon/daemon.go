@@ -1,4 +1,4 @@
-// Package daemon is Askgate's per-user server. It owns the database, serves
+// Package daemon is Pilothouse's per-user server. It owns the database, serves
 // the local API on a Unix socket (BUILD-SPEC §4) and the web app on a
 // loopback TCP listener, routes hook calls (§5), tracks presence and process
 // liveness, and fans events out to every client.
@@ -24,22 +24,22 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/all"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/config"
-	"github.com/xasdta/askgate/internal/core"
-	"github.com/xasdta/askgate/internal/notify"
-	"github.com/xasdta/askgate/internal/paths"
-	"github.com/xasdta/askgate/internal/policy"
-	"github.com/xasdta/askgate/internal/presence"
-	"github.com/xasdta/askgate/internal/proc"
-	"github.com/xasdta/askgate/internal/store"
-	"github.com/xasdta/askgate/internal/web"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/all"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/config"
+	"github.com/xasdta/pilothouse/internal/core"
+	"github.com/xasdta/pilothouse/internal/notify"
+	"github.com/xasdta/pilothouse/internal/paths"
+	"github.com/xasdta/pilothouse/internal/policy"
+	"github.com/xasdta/pilothouse/internal/presence"
+	"github.com/xasdta/pilothouse/internal/proc"
+	"github.com/xasdta/pilothouse/internal/store"
+	"github.com/xasdta/pilothouse/internal/web"
 )
 
 // ErrAlreadyRunning is returned by Run when another daemon holds the lock.
-var ErrAlreadyRunning = errors.New("another askgate daemon is already running (check with `askgate status`)")
+var ErrAlreadyRunning = errors.New("another pilothouse daemon is already running (check with `pilothouse status`)")
 
 // PolicyEngine is the part of *policy.Engine the daemon uses.
 type PolicyEngine interface {
@@ -228,7 +228,7 @@ func (d *Daemon) run(parent context.Context) (err error) {
 		go func() { serveErr <- serve(webSrv, webLn) }()
 	}
 	d.startLoops()
-	d.log.Info("askgate daemon started", "socket", paths.Socket(), "web", d.webURL, "pid", os.Getpid())
+	d.log.Info("pilothouse daemon started", "socket", paths.Socket(), "web", d.webURL, "pid", os.Getpid())
 	if d.opts.OnReady != nil {
 		d.opts.OnReady(d)
 	}
@@ -239,7 +239,7 @@ func (d *Daemon) run(parent context.Context) (err error) {
 		d.log.Error("listener failed", "err", err)
 	}
 	d.shutdown(unixSrv, webSrv)
-	d.log.Info("askgate daemon stopped")
+	d.log.Info("pilothouse daemon stopped")
 	return err
 }
 
@@ -255,7 +255,7 @@ func serve(srv *http.Server, ln net.Listener) error {
 func (d *Daemon) shutdown(servers ...*http.Server) {
 	d.stop()
 	d.waiters.close() // no hook may start holding after the release below
-	d.releaseHeld(context.Background(), "the askgate daemon is stopping")
+	d.releaseHeld(context.Background(), "the pilothouse daemon is stopping")
 	d.broker.close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -343,7 +343,7 @@ func (d *Daemon) listenWeb() (*http.Server, net.Listener) {
 func (d *Daemon) WebURL() string { return d.webURL }
 
 // acquireLock takes an exclusive flock on path so only one daemon runs per
-// ASKGATE_RUN_DIR. The kernel drops the lock if the process dies.
+// PILOTHOUSE_RUN_DIR. The kernel drops the lock if the process dies.
 func acquireLock(path string) (func(), error) {
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
 	if err != nil {

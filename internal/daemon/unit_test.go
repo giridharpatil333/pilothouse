@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 func TestGrantPrefix(t *testing.T) {
@@ -95,10 +95,10 @@ func TestGuardedRoute(t *testing.T) {
 
 func TestProcessGuard(t *testing.T) {
 	procs := map[int]adapters.Proc{
-		10: {PID: 10, PPID: 9, Comm: "askgate"},
+		10: {PID: 10, PPID: 9, Comm: "pilothouse"},
 		9:  {PID: 9, PPID: 8, Comm: "zsh"},
 		8:  {PID: 8, PPID: 1, Comm: "/usr/local/bin/claude"},
-		20: {PID: 20, PPID: 19, Comm: "askgate"},
+		20: {PID: 20, PPID: 19, Comm: "pilothouse"},
 		19: {PID: 19, PPID: 1, Comm: "zsh"},
 		30: {PID: 30, PPID: 1, Comm: "codex"},
 	}
@@ -129,8 +129,8 @@ func TestProcessGuard(t *testing.T) {
 		pid     int64
 		allowed bool
 	}{
-		{10, false}, // askgate run from a shell inside claude
-		{20, true},  // askgate from the person's own terminal
+		{10, false}, // pilothouse run from a shell inside claude
+		{20, true},  // pilothouse from the person's own terminal
 		{30, false}, // the agent itself
 		{0, false},  // peer unknown: fail closed
 		{99, false}, // peer vanished: fail closed

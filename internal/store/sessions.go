@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // Rows keep the full object as JSON in `data`; the other columns exist only

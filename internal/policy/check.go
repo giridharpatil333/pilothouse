@@ -3,7 +3,7 @@ package policy
 import (
 	"os"
 
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 // Check parses and compiles policy file contents exactly as Load would,

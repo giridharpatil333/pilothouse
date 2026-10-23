@@ -1,7 +1,7 @@
 package cli
 
 // Workstream F: the everyday commands — setup, doctor, inbox (also the
-// default when askgate runs on a terminal with no arguments), ls,
+// default when pilothouse runs on a terminal with no arguments), ls,
 // approve, deny, log, explain, here/away/auto, service, notify, version.
 
 import (
@@ -24,16 +24,16 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/all"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/config"
-	"github.com/xasdta/askgate/internal/paths"
-	"github.com/xasdta/askgate/internal/presence"
-	"github.com/xasdta/askgate/internal/service"
-	"github.com/xasdta/askgate/internal/tui"
-	"github.com/xasdta/askgate/internal/version"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/all"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/config"
+	"github.com/xasdta/pilothouse/internal/paths"
+	"github.com/xasdta/pilothouse/internal/presence"
+	"github.com/xasdta/pilothouse/internal/service"
+	"github.com/xasdta/pilothouse/internal/tui"
+	"github.com/xasdta/pilothouse/internal/version"
 )
 
 // serviceManager is what the CLI needs from internal/service; tests swap
@@ -55,7 +55,7 @@ var (
 	inboxAdapters   = func() []adapters.Adapter { return all.List() }
 	inboxServiceMgr = func(exe string) serviceManager { return service.New(exe) }
 	// inboxStartDaemon is the fallback when no service manager is used:
-	// `askgate start` (workstream A) starts the daemon in the background.
+	// `pilothouse start` (workstream A) starts the daemon in the background.
 	inboxStartDaemon = func(ctx context.Context, exe string) error {
 		c := exec.CommandContext(ctx, exe, "start")
 		c.Stdout, c.Stderr = os.Stderr, os.Stderr
@@ -84,14 +84,14 @@ func inboxErr(err error, ref string) error {
 	case err == nil:
 		return nil
 	case errors.Is(err, client.ErrDaemonDown):
-		return errors.New("the askgate daemon isn't running — start it with `askgate start` (or `askgate setup` the first time)")
+		return errors.New("the pilothouse daemon isn't running — start it with `pilothouse start` (or `pilothouse setup` the first time)")
 	case errors.As(err, &ae) && ae.Code == "agent_caller":
-		return errors.New("refused: this shell runs inside an agent session, and agents can't approve themselves or change Askgate — run the command from your own terminal")
+		return errors.New("refused: this shell runs inside an agent session, and agents can't approve themselves or change Pilothouse — run the command from your own terminal")
 	case errors.As(err, &ae) && ae.Code == "already_decided":
-		return fmt.Errorf("already answered (the first answer wins): %s — see `askgate log`", ae.Msg)
+		return fmt.Errorf("already answered (the first answer wins): %s — see `pilothouse log`", ae.Msg)
 	case errors.As(err, &ae) && ae.Code == "not_found":
 		if ref != "" {
-			return fmt.Errorf("nothing matches %q — run `askgate ls` to see ids", ref)
+			return fmt.Errorf("nothing matches %q — run `pilothouse ls` to see ids", ref)
 		}
 		return errors.New(ae.Msg)
 	}
@@ -103,7 +103,7 @@ func inboxErr(err error, ref string) error {
 func resolvedExe() (string, error) {
 	exe, err := inboxExecutable()
 	if err != nil {
-		return "", fmt.Errorf("can't find the askgate binary: %w", err)
+		return "", fmt.Errorf("can't find the pilothouse binary: %w", err)
 	}
 	if r, err := filepath.EvalSymlinks(exe); err == nil {
 		exe = r
@@ -152,11 +152,11 @@ func newInboxCmd() *cobra.Command {
 		Long: `The inbox lists every agent session on this machine and every request
 waiting for a person. Answer with y (allow), a (allow for session) or
 n (deny), attach to wrapped sessions with enter, press ? for all keys.
-Running askgate with no arguments in a terminal opens it too.`,
+Running pilothouse with no arguments in a terminal opens it too.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if !inboxIsTerminal() {
-				return errors.New("the inbox needs an interactive terminal — use `askgate ls` in scripts")
+				return errors.New("the inbox needs an interactive terminal — use `pilothouse ls` in scripts")
 			}
 			return runInbox(cmd)
 		},
@@ -232,11 +232,11 @@ func printLs(w io.Writer, out lsOutput, allSessions []api.Session) {
 		fmt.Fprintln(tw, "  REQUEST\tAGENT\tWHERE\tWHAT\tAGE\tANSWER")
 		for _, r := range out.Requests {
 			s := byID[r.SessionID]
-			answer := "askgate approve|deny " + inboxShortRef(r.ID)
+			answer := "pilothouse approve|deny " + inboxShortRef(r.ID)
 			if r.Status == api.RequestSteppedAside {
 				answer = "in its terminal"
 				if s.Mode == api.ModeWrapped {
-					answer = "askgate attach " + inboxShortRef(s.ID)
+					answer = "pilothouse attach " + inboxShortRef(s.ID)
 				}
 			}
 			fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\t%s\t%s\n", r.ID, r.Agent, inboxWhere(s, r.Cwd),
@@ -246,7 +246,7 @@ func printLs(w io.Writer, out lsOutput, allSessions []api.Session) {
 		fmt.Fprintln(w)
 	}
 	if len(out.Sessions) == 0 {
-		fmt.Fprintln(w, "No agent sessions. Start Claude Code or Codex as usual, or `askgate run claude`.")
+		fmt.Fprintln(w, "No agent sessions. Start Claude Code or Codex as usual, or `pilothouse run claude`.")
 		return
 	}
 	fmt.Fprintln(w, "SESSIONS")
@@ -340,7 +340,7 @@ func newApproveCmd() *cobra.Command {
 session id when that session has exactly one waiting request. With
 --session, later calls of the same kind (e.g. the same command prefix)
 are allowed for the rest of that agent session.`,
-		Example: "  askgate approve r_7hq\n  askgate approve s_k3m --session",
+		Example: "  pilothouse approve r_7hq\n  pilothouse approve s_k3m --session",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			scope := api.ScopeOnce
@@ -359,7 +359,7 @@ func newDenyCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "deny <request-or-session-id> [-m reason]",
 		Short:   "Deny a request that is waiting for you",
-		Example: `  askgate deny r_7hq -m "open a PR instead of pushing to main"`,
+		Example: `  pilothouse deny r_7hq -m "open a PR instead of pushing to main"`,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInboxDecide(cmd, args[0], api.DecideBody{Behavior: api.BehaviorDeny, Message: msg})
@@ -385,7 +385,7 @@ func resolveRequestRef(ctx context.Context, c *client.Client, ref string) (api.R
 		}
 		switch len(match) {
 		case 0:
-			return api.Request{}, fmt.Errorf("session %q has no request waiting for you — run `askgate ls`", ref)
+			return api.Request{}, fmt.Errorf("session %q has no request waiting for you — run `pilothouse ls`", ref)
 		case 1:
 			return match[0], nil
 		}
@@ -413,7 +413,7 @@ func runInboxDecide(cmd *cobra.Command, ref string, body api.DecideBody) error {
 		// was at the desk); an answer here would not reach that dialog.
 		hint := "answer it in the terminal where the agent runs"
 		if s, err := c.Session(ctx, req.SessionID); err == nil && s.Mode == api.ModeWrapped {
-			hint = "attach with `askgate attach " + inboxShortRef(s.ID) + "` and answer it there"
+			hint = "attach with `pilothouse attach " + inboxShortRef(s.ID) + "` and answer it there"
 		}
 		return fmt.Errorf("%s is showing in the agent's own permission dialog — %s", req.ID, hint)
 	default:
@@ -538,7 +538,7 @@ func newLogCmd() *cobra.Command {
 					if err != nil {
 						return inboxErr(err, "")
 					}
-					fmt.Fprintln(cmd.ErrOrStderr(), "askgate: some events were skipped (the log was trimmed); continuing from now")
+					fmt.Fprintln(cmd.ErrOrStderr(), "pilothouse: some events were skipped (the log was trimmed); continuing from now")
 					last = snap.Seq
 				default:
 					return inboxErr(err, "")
@@ -776,16 +776,16 @@ func presenceSentence(p api.Presence) string {
 	}
 	switch p.Mode {
 	case api.PresenceForceHere:
-		return "Presence: here (until you run `askgate auto`). " + where
+		return "Presence: here (until you run `pilothouse auto`). " + where
 	case api.PresenceForceAway:
-		return "Presence: away (until you run `askgate auto`). " + where
+		return "Presence: away (until you run `pilothouse auto`). " + where
 	}
 	s := "Presence: auto — now " + string(p.State)
 	if p.State == api.PresencePresent {
 		s = "Presence: auto — now here"
 	}
 	if p.Source == "unknown" || p.Source == "none" {
-		s += " (idle time can't be measured on this machine; use `askgate away` when you leave)"
+		s += " (idle time can't be measured on this machine; use `pilothouse away` when you leave)"
 	} else if p.IdleSecs > 0 {
 		s += fmt.Sprintf(" (idle %s)", tui.Age(time.Duration(p.IdleSecs)*time.Second))
 	}
@@ -808,7 +808,7 @@ func newServiceCmd() *cobra.Command {
 		}
 		m := inboxServiceMgr(exe)
 		if m.Kind() == "" {
-			return nil, fmt.Errorf("%w — run the daemon with `askgate start` instead", service.ErrUnsupported)
+			return nil, fmt.Errorf("%w — run the daemon with `pilothouse start` instead", service.ErrUnsupported)
 		}
 		return m, nil
 	}
@@ -887,7 +887,7 @@ func newServiceCmd() *cobra.Command {
 			tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 			fmt.Fprintf(tw, "manager\t%s\n", st.Kind)
 			fmt.Fprintf(tw, "file\t%s\n", st.Path)
-			fmt.Fprintf(tw, "installed\t%s\n", yesNo(st.Installed, st.Installed && !st.Current, "out of date — run `askgate service install`"))
+			fmt.Fprintf(tw, "installed\t%s\n", yesNo(st.Installed, st.Installed && !st.Current, "out of date — run `pilothouse service install`"))
 			fmt.Fprintf(tw, "running\t%s\n", yesNo(st.Running, false, ""))
 			if st.PID != 0 {
 				fmt.Fprintf(tw, "pid\t%d\n", st.PID)
@@ -1026,7 +1026,7 @@ func newVersionCmd() *cobra.Command {
 			if asJSON {
 				return inboxJSON(cmd.OutOrStdout(), v)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "askgate %s (commit %s, built %s)\n%s %s/%s, protocol %d\n",
+			fmt.Fprintf(cmd.OutOrStdout(), "pilothouse %s (commit %s, built %s)\n%s %s/%s, protocol %d\n",
 				v.Version, v.Commit, v.Date, v.Go, v.OS, v.Arch, v.Protocol)
 			return nil
 		},
@@ -1043,7 +1043,7 @@ func newSetupCmd() *cobra.Command {
 		Use:   "setup [--yes]",
 		Short: "Get going: install hooks, start the daemon, check notifications",
 		Long: `Setup finds your coding agents, shows what it will change, installs
-Askgate's hooks (backing up each settings file first), runs the daemon as a
+Pilothouse's hooks (backing up each settings file first), runs the daemon as a
 login service, and sends a test notification. Run it again any time: it
 only changes what is missing or out of date.`,
 		Args: cobra.NoArgs,
@@ -1091,7 +1091,7 @@ func runSetup(cmd *cobra.Command, yes bool) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(w, "Askgate setup")
+	fmt.Fprintln(w, "Pilothouse setup")
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "  binary  %s (%s)\n", exe, version.Version)
 	if why := unstableExe(exe); why != "" {
@@ -1138,17 +1138,17 @@ func runSetup(cmd *cobra.Command, yes bool) error {
 			note("✗ " + a.DisplayName() + ": " + err.Error())
 			continue
 		}
-		fmt.Fprintf(w, "  • %s%s  %s\n", a.DisplayName(), ver, inboxOr(ch.Summary, "will add Askgate hooks"))
+		fmt.Fprintf(w, "  • %s%s  %s\n", a.DisplayName(), ver, inboxOr(ch.Summary, "will add Pilothouse hooks"))
 		fmt.Fprintf(w, "      file: %s (a backup is written first)\n", tui.ShortPath(ch.Path))
 		toInstall = append(toInstall, a)
 	}
 	if found == 0 {
-		fmt.Fprintln(w, "  No supported agent found yet. Install Claude Code or Codex, then run `askgate setup` again.")
+		fmt.Fprintln(w, "  No supported agent found yet. Install Claude Code or Codex, then run `pilothouse setup` again.")
 	}
 	fmt.Fprintln(w)
 	for _, a := range toInstall {
-		if !ui.ask("Install Askgate hooks for " + a.DisplayName() + "?") {
-			note("· " + a.DisplayName() + " hooks skipped (install later: `askgate hooks install`)")
+		if !ui.ask("Install Pilothouse hooks for " + a.DisplayName() + "?") {
+			note("· " + a.DisplayName() + " hooks skipped (install later: `pilothouse hooks install`)")
 			continue
 		}
 		ch, err := a.InstallHooks(opts)
@@ -1197,13 +1197,13 @@ func runSetup(cmd *cobra.Command, yes bool) error {
 				note("✓ daemon runs at login (" + mgr.Kind() + ")")
 			}
 		} else {
-			note("· login service skipped (`askgate service install` later)")
+			note("· login service skipped (`pilothouse service install` later)")
 		}
 	}
 	if !usedService && !running {
-		fmt.Fprintln(w, "  starting the daemon in the background: askgate start")
+		fmt.Fprintln(w, "  starting the daemon in the background: pilothouse start")
 		if err := inboxStartDaemon(ctx, exe); err != nil {
-			fmt.Fprintf(w, "  ✗ askgate start: %v\n", err)
+			fmt.Fprintf(w, "  ✗ pilothouse start: %v\n", err)
 		}
 	}
 	h, err := waitForHealth(ctx, inboxHealthWait)
@@ -1213,7 +1213,7 @@ func runSetup(cmd *cobra.Command, yes bool) error {
 		note("✓ daemon running")
 	} else {
 		fmt.Fprintf(w, "  ✗ the daemon isn't answering: %v\n", err)
-		note("✗ daemon not running — see `askgate doctor`")
+		note("✗ daemon not running — see `pilothouse doctor`")
 	}
 
 	// 3. Notifications.
@@ -1236,11 +1236,11 @@ func runSetup(cmd *cobra.Command, yes bool) error {
 	fmt.Fprintln(w, "Next")
 	tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
 	if _, err := os.Stat(paths.Policy()); errors.Is(err, os.ErrNotExist) {
-		fmt.Fprintln(tw, "  askgate policy init\twrite a starter policy (block force-push, ask before deploys, …)")
+		fmt.Fprintln(tw, "  pilothouse policy init\twrite a starter policy (block force-push, ask before deploys, …)")
 	}
-	fmt.Fprintln(tw, "  askgate pair\tpair your phone to approve when you're away")
-	fmt.Fprintln(tw, "  askgate\topen the inbox")
-	fmt.Fprintln(tw, "  askgate doctor\tcheck everything is wired up")
+	fmt.Fprintln(tw, "  pilothouse pair\tpair your phone to approve when you're away")
+	fmt.Fprintln(tw, "  pilothouse\topen the inbox")
+	fmt.Fprintln(tw, "  pilothouse doctor\tcheck everything is wired up")
 	tw.Flush()
 	if !daemonOK {
 		return ExitError{Code: 1}
@@ -1350,7 +1350,7 @@ func runDoctor(ctx context.Context) []doctorCheck {
 	case unstableExe(exe) != "":
 		add("binary", checkFail, exe, unstableExe(exe))
 	default:
-		onPath, perr := inboxLookPath("askgate")
+		onPath, perr := inboxLookPath("pilothouse")
 		if perr == nil {
 			if r, err := filepath.EvalSymlinks(onPath); err == nil {
 				onPath = r
@@ -1358,9 +1358,9 @@ func runDoctor(ctx context.Context) []doctorCheck {
 		}
 		switch {
 		case perr != nil:
-			add("binary", checkWarn, exe+" ("+version.Version+")", "askgate isn't on your PATH; hooks still work, but add its directory to PATH to use the CLI everywhere")
+			add("binary", checkWarn, exe+" ("+version.Version+")", "pilothouse isn't on your PATH; hooks still work, but add its directory to PATH to use the CLI everywhere")
 		case onPath != exe:
-			add("binary", checkWarn, exe+" ("+version.Version+")", "`askgate` on your PATH is "+onPath+"; hooks and the service use the binary that ran setup — run `askgate setup` with the one you keep")
+			add("binary", checkWarn, exe+" ("+version.Version+")", "`pilothouse` on your PATH is "+onPath+"; hooks and the service use the binary that ran setup — run `pilothouse setup` with the one you keep")
 		default:
 			add("binary", checkOK, exe+" ("+version.Version+")", "")
 		}
@@ -1381,13 +1381,13 @@ func runDoctor(ctx context.Context) []doctorCheck {
 	daemonUp := herr == nil
 	switch {
 	case errors.Is(herr, client.ErrDaemonDown):
-		add("daemon", checkFail, "not running", "`askgate start`, or `askgate service install` to run it at login")
+		add("daemon", checkFail, "not running", "`pilothouse start`, or `pilothouse service install` to run it at login")
 	case herr != nil:
 		add("daemon", checkFail, herr.Error(), "check "+tui.ShortPath(service.LogFile()))
 	case h.Protocol != api.ProtocolVersion:
-		add("daemon", checkFail, fmt.Sprintf("speaks protocol %d, this CLI %d", h.Protocol, api.ProtocolVersion), "restart it with the current binary: `askgate service restart` or `askgate stop && askgate start`")
+		add("daemon", checkFail, fmt.Sprintf("speaks protocol %d, this CLI %d", h.Protocol, api.ProtocolVersion), "restart it with the current binary: `pilothouse service restart` or `pilothouse stop && pilothouse start`")
 	case h.Version != version.Version:
-		add("daemon", checkWarn, fmt.Sprintf("running %s (pid %d), this binary is %s", h.Version, h.PID, version.Version), "`askgate service restart` (agents keep running)")
+		add("daemon", checkWarn, fmt.Sprintf("running %s (pid %d), this binary is %s", h.Version, h.PID, version.Version), "`pilothouse service restart` (agents keep running)")
 	default:
 		add("daemon", checkOK, fmt.Sprintf("running (pid %d, %s)", h.PID, h.Version), "")
 	}
@@ -1430,9 +1430,9 @@ func runDoctor(ctx context.Context) []doctorCheck {
 			if len(st.Problems) > 0 {
 				detail += ": " + strings.Join(st.Problems, "; ")
 			}
-			add(name, checkWarn, detail, "`askgate hooks install`")
+			add(name, checkWarn, detail, "`pilothouse hooks install`")
 		default:
-			add(name, checkFail, "not installed — this agent's sessions are invisible to Askgate", "`askgate setup` or `askgate hooks install`")
+			add(name, checkFail, "not installed — this agent's sessions are invisible to Pilothouse", "`pilothouse setup` or `pilothouse hooks install`")
 		}
 	}
 
@@ -1440,17 +1440,17 @@ func runDoctor(ctx context.Context) []doctorCheck {
 	if exe != "" {
 		m := inboxServiceMgr(exe)
 		if m.Kind() == "" {
-			add("service", checkInfo, "no launchd/systemd user manager here; start the daemon with `askgate start`", "")
+			add("service", checkInfo, "no launchd/systemd user manager here; start the daemon with `pilothouse start`", "")
 		} else if st, err := m.Status(ctx); err != nil {
 			add("service", checkWarn, err.Error(), "")
 		} else {
 			switch {
 			case !st.Installed:
-				add("service", checkWarn, "not installed — the daemon won't start at login", "`askgate service install`")
+				add("service", checkWarn, "not installed — the daemon won't start at login", "`pilothouse service install`")
 			case !st.Current:
-				add("service", checkWarn, "installed but points at another binary or old settings", "`askgate service install`")
+				add("service", checkWarn, "installed but points at another binary or old settings", "`pilothouse service install`")
 			case !st.Running:
-				add("service", checkWarn, "installed but not running ("+inboxOr(st.Detail, "stopped")+")", "`askgate service start`")
+				add("service", checkWarn, "installed but not running ("+inboxOr(st.Detail, "stopped")+")", "`pilothouse service start`")
 			case st.Linger != nil && !*st.Linger:
 				add("service", checkOK, fmt.Sprintf("%s, running (pid %d); stops at logout unless linger is on (`loginctl enable-linger $USER`)", st.Kind, st.PID), "")
 			default:
@@ -1464,9 +1464,9 @@ func runDoctor(ctx context.Context) []doctorCheck {
 	if idle, ok := det.Idle(); ok {
 		add("presence", checkOK, fmt.Sprintf("%s works (idle %s; away after %s)", det.Source(), tui.Age(idle), cfg.Presence.IdleThreshold.Duration), "")
 	} else if det.Source() == presence.SourceNone {
-		add("presence", checkWarn, "idle time can't be measured here (no desktop session?)", "set it by hand: `askgate away` when you leave, `askgate here` when you're back")
+		add("presence", checkWarn, "idle time can't be measured here (no desktop session?)", "set it by hand: `pilothouse away` when you leave, `pilothouse here` when you're back")
 	} else {
-		add("presence", checkWarn, det.Source()+" didn't answer", "set it by hand with `askgate here|away`")
+		add("presence", checkWarn, det.Source()+" didn't answer", "set it by hand with `pilothouse here|away`")
 	}
 
 	// Notifications.
@@ -1505,27 +1505,27 @@ func runDoctor(ctx context.Context) []doctorCheck {
 	remote := cfg.Notify.Ntfy.Topic != "" || len(cfg.Notify.Webhooks) > 0 || devices > 0
 	switch {
 	case len(ch) == 0:
-		add("notifications", checkWarn, "no channels configured", "`askgate pair` to get pushes on your phone")
+		add("notifications", checkWarn, "no channels configured", "`pilothouse pair` to get pushes on your phone")
 	case !remote:
-		add("notifications", checkWarn, strings.Join(ch, ", ")+" — nothing reaches you when you're away", "`askgate pair` to approve from your phone")
+		add("notifications", checkWarn, strings.Join(ch, ", ")+" — nothing reaches you when you're away", "`pilothouse pair` to approve from your phone")
 	default:
 		add("notifications", checkOK, strings.Join(ch, ", "), "")
 	}
 
 	// Remote URL.
 	if u := cfg.Web.PublicURL; u == "" {
-		add("remote", checkInfo, "phone access only on this network/machine", "`askgate remote tailscale` to reach it from anywhere")
+		add("remote", checkInfo, "phone access only on this network/machine", "`pilothouse remote tailscale` to reach it from anywhere")
 	} else {
 		rctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		req, _ := http.NewRequestWithContext(rctx, http.MethodGet, strings.TrimRight(u, "/")+"/", nil)
 		resp, err := inboxHTTPClient.Do(req)
 		cancel()
 		if err != nil {
-			add("remote", checkFail, u+" isn't reachable: "+err.Error(), "`askgate remote status`")
+			add("remote", checkFail, u+" isn't reachable: "+err.Error(), "`pilothouse remote status`")
 		} else {
 			resp.Body.Close()
 			if resp.StatusCode >= 500 {
-				add("remote", checkFail, fmt.Sprintf("%s answers %s", u, resp.Status), "`askgate remote status`")
+				add("remote", checkFail, fmt.Sprintf("%s answers %s", u, resp.Status), "`pilothouse remote status`")
 			} else {
 				add("remote", checkOK, u+" reachable", "")
 			}
@@ -1541,7 +1541,7 @@ func runDoctor(ctx context.Context) []doctorCheck {
 		case err != nil:
 			add("policy", checkWarn, "status unavailable: "+inboxErr(err, "").Error(), "")
 		case len(ps.Errors) > 0:
-			add("policy", checkFail, strings.Join(ps.Errors, "; "), "fix the file, then `askgate policy check`")
+			add("policy", checkFail, strings.Join(ps.Errors, "; "), "fix the file, then `pilothouse policy check`")
 		default:
 			files := 0
 			for _, f := range ps.Files {
@@ -1551,7 +1551,7 @@ func runDoctor(ctx context.Context) []doctorCheck {
 			}
 			detail := fmt.Sprintf("%d rules from %d file(s)", ps.Rules, files)
 			if files == 0 {
-				add("policy", checkInfo, detail+" (built-in rules only)", "`askgate policy init` for a starter policy")
+				add("policy", checkInfo, detail+" (built-in rules only)", "`pilothouse policy init` for a starter policy")
 			} else {
 				add("policy", checkOK, detail, "")
 			}

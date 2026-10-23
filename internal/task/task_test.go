@@ -16,22 +16,22 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
-// testEnv isolates Askgate paths and git configuration (no user hooks,
+// testEnv isolates Pilothouse paths and git configuration (no user hooks,
 // signing or templates) for one test.
 func testEnv(t *testing.T) {
 	t.Helper()
-	t.Setenv("ASKGATE_HOME", t.TempDir())
-	t.Setenv("ASKGATE_USER_HOME", t.TempDir())
+	t.Setenv("PILOTHOUSE_HOME", t.TempDir())
+	t.Setenv("PILOTHOUSE_USER_HOME", t.TempDir())
 	run, err := os.MkdirTemp("/tmp", "ag")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(run) })
-	t.Setenv("ASKGATE_RUN_DIR", run)
+	t.Setenv("PILOTHOUSE_RUN_DIR", run)
 	gitcfg := filepath.Join(t.TempDir(), "gitconfig")
 	if err := os.WriteFile(gitcfg, []byte("[user]\n\tname = Test\n\temail = test@example.com\n[init]\n\tdefaultBranch = main\n[commit]\n\tgpgsign = false\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -89,7 +89,7 @@ func syncStarter(t *testing.T) Starter {
 	return func(ctx context.Context, s StartSpec) (string, error) {
 		cmd := exec.CommandContext(ctx, s.Argv[0], s.Argv[1:]...)
 		cmd.Dir = s.Dir
-		cmd.Env = append(os.Environ(), "ASKGATE_TASK_ID="+s.TaskID)
+		cmd.Env = append(os.Environ(), "PILOTHOUSE_TASK_ID="+s.TaskID)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("fake agent: %v\n%s", err, out)
 		}
@@ -135,7 +135,7 @@ func TestNewDiffDone(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantWT := filepath.Join(paths.Home(), "worktrees", "my-repo", "add-a-greeting")
-	if tk.Title != "add-a-greeting" || tk.Branch != "askgate/add-a-greeting" || tk.Worktree != wantWT ||
+	if tk.Title != "add-a-greeting" || tk.Branch != "pilothouse/add-a-greeting" || tk.Worktree != wantWT ||
 		tk.BaseRef != "main" || tk.Repo != repo || tk.SessionID != "s_fakesessn" || tk.Status != api.TaskRunning ||
 		!strings.HasPrefix(tk.ID, "t_") || tk.Agent != api.AgentGeneric {
 		t.Fatalf("task %+v", tk)
@@ -355,7 +355,7 @@ func TestStartFailureRollsBack(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "holder exploded") {
 		t.Fatalf("got %v", err)
 	}
-	if gitOK(context.Background(), repo, "show-ref", "--verify", "--quiet", "refs/heads/askgate/doomed") {
+	if gitOK(context.Background(), repo, "show-ref", "--verify", "--quiet", "refs/heads/pilothouse/doomed") {
 		t.Fatal("branch left behind")
 	}
 	if wt := mustGit(t, repo, "worktree", "list", "--porcelain"); strings.Contains(wt, "doomed") {

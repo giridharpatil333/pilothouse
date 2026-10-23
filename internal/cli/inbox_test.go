@@ -21,13 +21,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/presence"
-	"github.com/xasdta/askgate/internal/service"
-	"github.com/xasdta/askgate/internal/tui"
-	"github.com/xasdta/askgate/internal/version"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/presence"
+	"github.com/xasdta/pilothouse/internal/service"
+	"github.com/xasdta/pilothouse/internal/tui"
+	"github.com/xasdta/pilothouse/internal/version"
 )
 
 var ibxT0 = time.Date(2026, 10, 22, 15, 4, 5, 0, time.UTC)
@@ -230,7 +230,7 @@ func (d *ibxDaemon) handler() http.Handler {
 	return mux
 }
 
-// ibxEnv points every Askgate path at temp dirs (BUILD-SPEC invariant 1)
+// ibxEnv points every Pilothouse path at temp dirs (BUILD-SPEC invariant 1)
 // and swaps every system seam for a fake.
 func ibxEnv(t *testing.T) string {
 	t.Helper()
@@ -239,10 +239,10 @@ func ibxEnv(t *testing.T) string {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(run) })
-	t.Setenv("ASKGATE_RUN_DIR", run)
-	t.Setenv("ASKGATE_HOME", filepath.Join(t.TempDir(), "home"))
-	t.Setenv("ASKGATE_USER_HOME", "/home/dev")
-	t.Setenv("ASKGATE_NO_UPDATE_CHECK", "1")
+	t.Setenv("PILOTHOUSE_RUN_DIR", run)
+	t.Setenv("PILOTHOUSE_HOME", filepath.Join(t.TempDir(), "home"))
+	t.Setenv("PILOTHOUSE_USER_HOME", "/home/dev")
+	t.Setenv("PILOTHOUSE_NO_UPDATE_CHECK", "1")
 
 	saved := []func(){}
 	save := func(restore func()) { saved = append(saved, restore) }
@@ -264,7 +264,7 @@ func ibxEnv(t *testing.T) string {
 	{
 		v := inboxExecutable
 		save(func() { inboxExecutable = v })
-		inboxExecutable = func() (string, error) { return "/opt/askgate/bin/askgate", nil }
+		inboxExecutable = func() (string, error) { return "/opt/pilothouse/bin/pilothouse", nil }
 	}
 	{
 		v := inboxRunTUI
@@ -280,8 +280,8 @@ func ibxEnv(t *testing.T) string {
 		v := inboxLookPath
 		save(func() { inboxLookPath = v })
 		inboxLookPath = func(n string) (string, error) {
-			if n == "askgate" {
-				return "/opt/askgate/bin/askgate", nil
+			if n == "pilothouse" {
+				return "/opt/pilothouse/bin/pilothouse", nil
 			}
 			return "/usr/bin/" + n, nil
 		}
@@ -313,11 +313,11 @@ func ibxStart(t *testing.T) *ibxDaemon {
 		{At: ibxT0.Add(-12 * time.Second), Layer: api.LayerHook, State: api.StateBlocked, Kind: api.BlockPermission, Detail: "PermissionRequest Bash", Fresh: true},
 		{At: ibxT0.Add(-20 * time.Minute), Layer: api.LayerOSC, State: api.StateWorking, Detail: "OSC 7501 working"},
 	}}
-	ln, err := net.Listen("unix", filepath.Join(run, "askgate.sock"))
+	ln, err := net.Listen("unix", filepath.Join(run, "pilothouse.sock"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(filepath.Join(run, "askgate.sock"), 0o600); err != nil {
+	if err := os.Chmod(filepath.Join(run, "pilothouse.sock"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	srv := httptest.NewUnstartedServer(d.handler())
@@ -334,7 +334,7 @@ func ibxSnapshot() api.Snapshot {
 		Seq: 17, Machine: "box", Version: version.Version,
 		Presence: api.Presence{State: api.PresencePresent, Mode: api.PresenceAuto, Source: "os_idle"},
 		Sessions: []api.Session{
-			{ID: "s_k3m9q2xv7a", Agent: api.AgentClaude, Mode: api.ModeWrapped, Title: "askgate", Branch: "main", Cwd: "/home/dev/src/askgate",
+			{ID: "s_k3m9q2xv7a", Agent: api.AgentClaude, Mode: api.ModeWrapped, Title: "pilothouse", Branch: "main", Cwd: "/home/dev/src/pilothouse",
 				State: api.StateBlocked, BlockKind: api.BlockPermission, StateLayer: api.LayerHook, StateDetail: "Asked to run git push",
 				StartedAt: ibxT0.Add(-time.Hour), UpdatedAt: ibxT0.Add(-12 * time.Second)},
 			{ID: "s_p4t8w6n2rb", Agent: api.AgentCodex, Mode: api.ModeObserved, Title: "webapp", Cwd: "/home/dev/src/webapp",
@@ -346,7 +346,7 @@ func ibxSnapshot() api.Snapshot {
 		},
 		Requests: []api.Request{
 			{ID: "r_7hq2m4k9pd", SessionID: "s_k3m9q2xv7a", Agent: api.AgentClaude, Checkpoint: api.CheckpointPermission, Tool: "Bash",
-				ToolKind: api.ToolShell, Command: "git push origin main", Summary: "Run: git push origin main", Cwd: "/home/dev/src/askgate",
+				ToolKind: api.ToolShell, Command: "git push origin main", Summary: "Run: git push origin main", Cwd: "/home/dev/src/pilothouse",
 				Status: api.RequestOpen, Route: api.RouteDevices, CreatedAt: ibxT0.Add(-12 * time.Second)},
 			{ID: "r_b3c5d7e9fg", SessionID: "s_p4t8w6n2rb", Agent: api.AgentCodex, Checkpoint: api.CheckpointPermission, Tool: "apply_patch",
 				Paths: []string{"/home/dev/src/webapp/a.ts"}, Status: api.RequestSteppedAside, Route: api.RouteTerminal, CreatedAt: ibxT0.Add(-time.Minute)},
@@ -411,7 +411,7 @@ func TestInboxLs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ibxContains(t, out, "NEEDS YOU (3)", "r_7hq2m4k9pd", "$ git push origin main", "askgate approve|deny r_7hq2",
+	ibxContains(t, out, "NEEDS YOU (3)", "r_7hq2m4k9pd", "$ git push origin main", "pilothouse approve|deny r_7hq2",
 		"in its terminal", "SESSIONS", "s_k3m9q2xv7a", "blocked/permission", "[attach] Asked to run git push",
 		"waiting •", "Done. Want me to add pricing?")
 	if strings.Contains(out, "s_z0y9x8w7vu") || strings.Contains(out, "r_done000001") {
@@ -498,7 +498,7 @@ func TestInboxDaemonDown(t *testing.T) {
 	ibxEnv(t) // no daemon listening
 	for _, args := range [][]string{{"ls"}, {"approve", "r_1"}, {"deny", "r_1"}, {"log"}, {"explain", "s_1"}, {"here"}, {"notify", "test"}} {
 		_, err := ibxRun(t, "", args...)
-		if err == nil || !strings.Contains(err.Error(), "isn't running — start it with `askgate start`") {
+		if err == nil || !strings.Contains(err.Error(), "isn't running — start it with `pilothouse start`") {
 			t.Errorf("%v: err = %v", args, err)
 		}
 	}
@@ -511,7 +511,7 @@ func TestInboxLog(t *testing.T) {
 		t.Fatal(err)
 	}
 	ibxContains(t, out,
-		"15:04:15  s_k3m9q2  ▶ claude started in ~/src/askgate (wrapped)",
+		"15:04:15  s_k3m9q2  ▶ claude started in ~/src/pilothouse (wrapped)",
 		"15:04:16  s_k3m9q2  ↪ PreToolUse: Run: git push origin main",
 		"? $ git push origin main — held for your devices",
 		"· blocked (permission): Asked to run git push",
@@ -594,7 +594,7 @@ func TestInboxExplain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ibxContains(t, out, "s_k3m9q2xv7a  claude · askgate · main (wrapped)", "because  2: an open permission request exists",
+	ibxContains(t, out, "s_k3m9q2xv7a  claude · pilothouse · main (wrapped)", "because  2: an open permission request exists",
 		"EVIDENCE", "*  12s ago", "L1-osc", "OSC 7501 working")
 	if _, err := ibxRun(t, "", "explain", "s_nope"); err == nil || !strings.Contains(err.Error(), "nothing matches") {
 		t.Fatalf("unknown session: %v", err)
@@ -608,8 +608,8 @@ func TestInboxExplain(t *testing.T) {
 func TestInboxPresence(t *testing.T) {
 	d := ibxStart(t)
 	cases := map[string]string{
-		"here": "Presence: here (until you run `askgate auto`). Permission requests show in the agent's own dialog.",
-		"away": "Presence: away (until you run `askgate auto`). Permission requests are held and sent to your paired devices.",
+		"here": "Presence: here (until you run `pilothouse auto`). Permission requests show in the agent's own dialog.",
+		"away": "Presence: away (until you run `pilothouse auto`). Permission requests are held and sent to your paired devices.",
 		"auto": "Presence: auto — now here (idle 4s).",
 	}
 	for _, mode := range []string{"here", "away", "auto"} {
@@ -642,7 +642,7 @@ func TestInboxVersionAndNotify(t *testing.T) {
 		t.Fatalf("version: %v %+v", err, v)
 	}
 	out, _ = ibxRun(t, "", "version")
-	ibxContains(t, out, "askgate "+version.Version, "protocol 1")
+	ibxContains(t, out, "pilothouse "+version.Version, "protocol 1")
 
 	out, err = ibxRun(t, "", "notify", "test")
 	if err != nil {
@@ -666,11 +666,11 @@ func TestInboxDefaultCommand(t *testing.T) {
 	if _, err := ibxRun(t, ""); err != nil {
 		t.Fatal(err)
 	}
-	if got.Backend == nil || got.Exe != "/opt/askgate/bin/askgate" {
+	if got.Backend == nil || got.Exe != "/opt/pilothouse/bin/pilothouse" {
 		t.Fatalf("tui options = %+v", got)
 	}
 	inboxIsTerminal = func() bool { return false }
-	if _, err := ibxRun(t, "", "inbox"); err == nil || !strings.Contains(err.Error(), "askgate ls") {
+	if _, err := ibxRun(t, "", "inbox"); err == nil || !strings.Contains(err.Error(), "pilothouse ls") {
 		t.Fatalf("inbox without a TTY: %v", err)
 	}
 }
@@ -692,16 +692,16 @@ func (s *ibxService) rec(c string) {
 	s.calls = append(s.calls, c)
 }
 func (s *ibxService) Kind() string { return s.kind }
-func (s *ibxService) Path() string { return "/home/dev/Library/LaunchAgents/dev.askgate.daemon.plist" }
+func (s *ibxService) Path() string { return "/home/dev/Library/LaunchAgents/dev.pilothouse.daemon.plist" }
 func (s *ibxService) Install(context.Context) (service.Result, error) {
 	s.rec("install")
 	changed := !s.installed
 	s.installed, s.running = true, true
 	res := service.Result{Path: s.Path(), Changed: changed}
 	if changed {
-		res.Actions = []string{"wrote " + s.Path(), "loaded dev.askgate.daemon (starts at login)"}
+		res.Actions = []string{"wrote " + s.Path(), "loaded dev.pilothouse.daemon (starts at login)"}
 	} else {
-		res.Actions = []string{"already loaded dev.askgate.daemon"}
+		res.Actions = []string{"already loaded dev.pilothouse.daemon"}
 	}
 	return res, nil
 }
@@ -770,7 +770,7 @@ func (a *ibxAdapter) InstallHooks(o adapters.InstallOptions) (adapters.Change, e
 	ch := adapters.Change{Path: "/home/dev/.claude/settings.json", Changed: !a.hooks, Summary: "add hooks for 9 events"}
 	if !o.DryRun {
 		a.hooks = true
-		ch.Backup = "/home/dev/.claude/settings.json.askgate-bak-1"
+		ch.Backup = "/home/dev/.claude/settings.json.pilothouse-bak-1"
 	}
 	return ch, nil
 }
@@ -787,7 +787,7 @@ func TestInboxService(t *testing.T) {
 	ibxStart(t)
 	svc := &ibxService{kind: "launchd"}
 	inboxServiceMgr = func(exe string) serviceManager {
-		if exe != "/opt/askgate/bin/askgate" {
+		if exe != "/opt/pilothouse/bin/pilothouse" {
 			t.Errorf("service exe = %s", exe)
 		}
 		return svc
@@ -796,7 +796,7 @@ func TestInboxService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ibxContains(t, out, "✓ wrote /home/dev/Library/LaunchAgents/dev.askgate.daemon.plist", "✓ daemon running (pid 4242")
+	ibxContains(t, out, "✓ wrote /home/dev/Library/LaunchAgents/dev.pilothouse.daemon.plist", "✓ daemon running (pid 4242")
 	out, err = ibxRun(t, "", "service", "status")
 	if err != nil {
 		t.Fatal(err)
@@ -816,10 +816,10 @@ func TestInboxService(t *testing.T) {
 	}
 
 	svc.kind = ""
-	if _, err := ibxRun(t, "", "service", "install"); err == nil || !strings.Contains(err.Error(), "askgate start") {
+	if _, err := ibxRun(t, "", "service", "install"); err == nil || !strings.Contains(err.Error(), "pilothouse start") {
 		t.Fatalf("unsupported: %v", err)
 	}
-	inboxExecutable = func() (string, error) { return "/tmp/go-build123/b001/exe/askgate", nil }
+	inboxExecutable = func() (string, error) { return "/tmp/go-build123/b001/exe/pilothouse", nil }
 	if _, err := ibxRun(t, "", "service", "install"); err == nil || !strings.Contains(err.Error(), "go run") {
 		t.Fatalf("go-run binary must be refused: %v", err)
 	}
@@ -840,7 +840,7 @@ func TestInboxDoctor(t *testing.T) {
 		t.Fatalf("%v\n%s", err, out)
 	}
 	ibxContains(t, out,
-		"✓ binary", "/opt/askgate/bin/askgate",
+		"✓ binary", "/opt/pilothouse/bin/pilothouse",
 		"✓ daemon", "running (pid 4242",
 		"✓ socket", "(0600)",
 		"✓ hooks: Claude Code", "9 events wired",
@@ -848,7 +848,7 @@ func TestInboxDoctor(t *testing.T) {
 		"✓ service", "launchd, running",
 		"✓ presence", "macos_hid works",
 		"✓ notifications", "1 paired device(s)",
-		"· remote", "askgate remote tailscale",
+		"· remote", "pilothouse remote tailscale",
 		"✓ policy", "7 rules from 1 file(s)",
 		"Everything looks good.",
 	)
@@ -864,8 +864,8 @@ func TestInboxDoctor(t *testing.T) {
 	if !errors.As(err, &ee) || ee.Code != 1 {
 		t.Fatalf("doctor must exit 1 on problems: %v", err)
 	}
-	ibxContains(t, out, "✗ hooks: Claude Code", "→ `askgate setup` or `askgate hooks install`",
-		"✗ policy", "unknown action", "! presence", "askgate away", "2 problem(s)")
+	ibxContains(t, out, "✗ hooks: Claude Code", "→ `pilothouse setup` or `pilothouse hooks install`",
+		"✗ policy", "unknown action", "! presence", "pilothouse away", "2 problem(s)")
 
 	out, _ = ibxRun(t, "", "doctor", "--json")
 	var checks []doctorCheck
@@ -880,7 +880,7 @@ func TestInboxDoctorDaemonDown(t *testing.T) {
 	if err == nil {
 		t.Fatal("want exit 1")
 	}
-	ibxContains(t, out, "✗ daemon", "not running", "→ `askgate start`")
+	ibxContains(t, out, "✗ daemon", "not running", "→ `pilothouse start`")
 }
 
 func TestInboxSetup(t *testing.T) {
@@ -903,11 +903,11 @@ func TestInboxSetup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out)
 	}
-	ibxContains(t, out, "binary  /opt/askgate/bin/askgate", "• Claude Code 2.1.0  add hooks for 9 events",
-		"· Codex", "not found", "? Install Askgate hooks for Claude Code? [Y/n] yes",
-		"backup: ~/.claude/settings.json.askgate-bak-1", "✓ loaded dev.askgate.daemon", "✓ daemon running (pid 4242",
-		"✓ test notification sent", "askgate policy init", "askgate pair")
-	if len(claude.installs) != 2 || !claude.installs[0].DryRun || claude.installs[1].DryRun || claude.installs[1].ShimPath != "/opt/askgate/bin/askgate" {
+	ibxContains(t, out, "binary  /opt/pilothouse/bin/pilothouse", "• Claude Code 2.1.0  add hooks for 9 events",
+		"· Codex", "not found", "? Install Pilothouse hooks for Claude Code? [Y/n] yes",
+		"backup: ~/.claude/settings.json.pilothouse-bak-1", "✓ loaded dev.pilothouse.daemon", "✓ daemon running (pid 4242",
+		"✓ test notification sent", "pilothouse policy init", "pilothouse pair")
+	if len(claude.installs) != 2 || !claude.installs[0].DryRun || claude.installs[1].DryRun || claude.installs[1].ShimPath != "/opt/pilothouse/bin/pilothouse" {
 		t.Fatalf("installs = %+v", claude.installs)
 	}
 	if d.notified != 1 {
@@ -944,13 +944,13 @@ func TestInboxSetupNoDaemon(t *testing.T) {
 	inboxStartDaemon = func(context.Context, string) error { started = true; return nil }
 	out, err := ibxRun(t, "", "setup", "--yes")
 	if !started {
-		t.Fatal("without a service manager setup must fall back to `askgate start`")
+		t.Fatal("without a service manager setup must fall back to `pilothouse start`")
 	}
 	var ee ExitError
 	if !errors.As(err, &ee) {
 		t.Fatalf("err = %v", err)
 	}
-	ibxContains(t, out, "No supported agent found yet", "the daemon isn't answering", "askgate doctor")
+	ibxContains(t, out, "No supported agent found yet", "the daemon isn't answering", "pilothouse doctor")
 }
 
 func TestFormatEventLineFallback(t *testing.T) {

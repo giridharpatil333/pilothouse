@@ -15,14 +15,14 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/xasdta/askgate/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters"
 )
 
 // maxArgs caps Proc.Args: ancestry travels in every hook envelope, and a
 // long command line (a prompt passed as argv) would bloat each one.
 const maxArgs = 1024
 
-// ErrUnsupported is returned on platforms Askgate does not support.
+// ErrUnsupported is returned on platforms Pilothouse does not support.
 var ErrUnsupported = errors.New("process inspection is not supported on this platform")
 
 // Ancestors returns pid's ancestors, nearest first (pid itself excluded),

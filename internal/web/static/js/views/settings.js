@@ -178,7 +178,7 @@ export function settingsView() {
     try {
       await disablePush().catch(() => {});
       await api('POST', '/api/logout');
-      await self.AskgateKeys.clear().catch(() => {});
+      await self.PilothouseKeys.clear().catch(() => {});
       location.assign('/pair');
     } catch (err) {
       toast(err.message, 'bad');

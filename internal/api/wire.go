@@ -19,9 +19,9 @@ type DecideBody struct {
 	Message  string   `json:"message,omitempty"`
 }
 
-// WrappedSessionBody registers a session started by `askgate run`.
+// WrappedSessionBody registers a session started by `pilothouse run`.
 type WrappedSessionBody struct {
-	SessionID  string    `json:"session_id"` // chosen by the holder (so it can export ASKGATE_SESSION_ID before exec)
+	SessionID  string    `json:"session_id"` // chosen by the holder (so it can export PILOTHOUSE_SESSION_ID before exec)
 	Agent      AgentKind `json:"agent"`
 	Title      string    `json:"title"`
 	Cwd        string    `json:"cwd"`
@@ -49,7 +49,7 @@ type PresenceBody struct {
 	Mode PresenceMode `json:"mode"`
 }
 
-// Explain is the evidence behind a session's current state (`askgate explain`).
+// Explain is the evidence behind a session's current state (`pilothouse explain`).
 type Explain struct {
 	Session  Session         `json:"session"`
 	Evidence []StateEvidence `json:"evidence"` // newest first

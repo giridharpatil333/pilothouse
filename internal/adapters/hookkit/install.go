@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters"
 )
 
 // Plan is a computed edit of one JSON hooks file.
@@ -54,7 +54,7 @@ func (p Plan) Commit(ch *adapters.Change, now time.Time) error {
 }
 
 // Problems lists reasons hooks found in a file would not work: commands
-// whose program is missing or not executable (askgate moved or deleted).
+// whose program is missing or not executable (pilothouse moved or deleted).
 func Problems(found []Found) []string {
 	var out []string
 	seen := map[string]bool{}
@@ -70,7 +70,7 @@ func Problems(found []Found) []string {
 		st, err := os.Stat(prog)
 		switch {
 		case errors.Is(err, os.ErrNotExist):
-			out = append(out, fmt.Sprintf("hook command points to %s, which does not exist; run `askgate hooks install` again", prog))
+			out = append(out, fmt.Sprintf("hook command points to %s, which does not exist; run `pilothouse hooks install` again", prog))
 		case err == nil && st.Mode()&0o111 == 0:
 			out = append(out, fmt.Sprintf("hook command %s is not executable", prog))
 		}

@@ -47,7 +47,7 @@ func ReadFile(path string) (File, error) {
 }
 
 // Commit backs up the current file (when it exists) next to f.Path as
-// <name>.askgate-bak-<unix seconds>, then atomically replaces the content:
+// <name>.pilothouse-bak-<unix seconds>, then atomically replaces the content:
 // a crash leaves either the old or the new file, never half of one.
 func Commit(f File, data []byte, now time.Time) (backup string, err error) {
 	if f.Exists {
@@ -62,7 +62,7 @@ func Commit(f File, data []byte, now time.Time) (backup string, err error) {
 }
 
 func writeBackup(f File, now time.Time) (string, error) {
-	base := f.Path + ".askgate-bak-" + strconv.FormatInt(now.Unix(), 10)
+	base := f.Path + ".pilothouse-bak-" + strconv.FormatInt(now.Unix(), 10)
 	for i := 0; i < 100; i++ {
 		name := base
 		if i > 0 {
@@ -93,7 +93,7 @@ func atomicWrite(path string, data []byte, mode fs.FileMode) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".askgate-tmp-*")
+	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".pilothouse-tmp-*")
 	if err != nil {
 		return err
 	}

@@ -10,27 +10,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/hookkit"
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/hookkit"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 var update = flag.Bool("update", false, "rewrite golden files")
 
-// isolate points every Askgate path at temp dirs (BUILD-SPEC invariant 1).
-// CODEX_HOME is set to a decoy too: ASKGATE_USER_HOME must win over it.
+// isolate points every Pilothouse path at temp dirs (BUILD-SPEC invariant 1).
+// CODEX_HOME is set to a decoy too: PILOTHOUSE_USER_HOME must win over it.
 func isolate(t *testing.T) (userHome string) {
 	t.Helper()
 	userHome = t.TempDir()
-	t.Setenv("ASKGATE_HOME", t.TempDir())
-	t.Setenv("ASKGATE_USER_HOME", userHome)
+	t.Setenv("PILOTHOUSE_HOME", t.TempDir())
+	t.Setenv("PILOTHOUSE_USER_HOME", userHome)
 	t.Setenv("CODEX_HOME", filepath.Join(t.TempDir(), "decoy"))
 	run, err := os.MkdirTemp("/tmp", "ag")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(run) })
-	t.Setenv("ASKGATE_RUN_DIR", run)
+	t.Setenv("PILOTHOUSE_RUN_DIR", run)
 	return userHome
 }
 
@@ -149,7 +149,7 @@ func TestEncodeResponse(t *testing.T) {
 		{"pre deny", ev(adapters.HookPreTool), adapters.HookOutcome{Behavior: api.BehaviorDeny, Message: "No force-push."},
 			`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"No force-push."}}`},
 		{"pre deny needs a reason", ev(adapters.HookPreTool), adapters.HookOutcome{Behavior: api.BehaviorDeny},
-			`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Blocked by Askgate policy."}}`},
+			`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Blocked by Pilothouse policy."}}`},
 		{"pre allow unsupported", ev(adapters.HookPreTool), adapters.HookOutcome{Behavior: api.BehaviorAllow, Message: "ok"}, ``},
 		{"pre ask unsupported", ev(adapters.HookPreTool), adapters.HookOutcome{Behavior: api.BehaviorAsk, Message: "ask"}, ``},
 		{"permission allow", ev(adapters.HookPermission), adapters.HookOutcome{Behavior: api.BehaviorAllow},
@@ -178,7 +178,7 @@ func TestMetadata(t *testing.T) {
 	home := isolate(t)
 	a := Adapter{}
 	if Home() != filepath.Join(home, ".codex") {
-		t.Errorf("Home = %s (CODEX_HOME must not win under ASKGATE_USER_HOME)", Home())
+		t.Errorf("Home = %s (CODEX_HOME must not win under PILOTHOUSE_USER_HOME)", Home())
 	}
 	if a.MaxHold(adapters.HookPermission) != 600*time.Second || a.MaxHold(adapters.HookPreTool) != 0 {
 		t.Error("MaxHold")
@@ -204,7 +204,7 @@ func TestHomeHonorsCodexHomeOutsideTests(t *testing.T) {
 	if err := os.Symlink(real, link); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("ASKGATE_USER_HOME", "")
+	t.Setenv("PILOTHOUSE_USER_HOME", "")
 	t.Setenv("CODEX_HOME", link)
 	want, _ := filepath.EvalSymlinks(real)
 	if Home() != want {

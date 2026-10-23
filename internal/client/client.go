@@ -1,5 +1,5 @@
 // Package client talks to the local daemon over its Unix socket. The CLI,
-// the TUI, the hook shim and `askgate run` holders all use it.
+// the TUI, the hook shim and `pilothouse run` holders all use it.
 package client
 
 import (
@@ -17,13 +17,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 // ErrDaemonDown means nothing is listening on the socket.
-var ErrDaemonDown = errors.New("askgate daemon is not running (start it with `askgate start`)")
+var ErrDaemonDown = errors.New("pilothouse daemon is not running (start it with `pilothouse start`)")
 
 // APIError is a non-2xx response from the daemon.
 type APIError struct {
@@ -43,15 +43,15 @@ func IsCode(err error, code string) bool {
 type Client struct {
 	socket string
 	hc     *http.Client
-	name   string // X-Askgate-Client header; see WithClientName
+	name   string // X-Pilothouse-Client header; see WithClientName
 }
 
 // ClientHeader identifies the caller ("cli", "tui"); the daemon records it
 // as Decision.By for decisions made over the Unix socket.
-const ClientHeader = "X-Askgate-Client"
+const ClientHeader = "X-Pilothouse-Client"
 
 // WithClientName returns a copy of c that sends name in the
-// X-Askgate-Client header on every request. The copy shares c's
+// X-Pilothouse-Client header on every request. The copy shares c's
 // connection pool.
 func (c *Client) WithClientName(name string) *Client {
 	cp := *c
@@ -84,7 +84,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 		}
 		rd = bytes.NewReader(b)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, "http://askgate"+path, rd)
+	req, err := http.NewRequestWithContext(ctx, method, "http://pilothouse"+path, rd)
 	if err != nil {
 		return err
 	}
@@ -279,7 +279,7 @@ func (c *Client) Events(ctx context.Context, after int64) ([]api.Event, error) {
 // order. It returns ErrResync if the daemon says the client must reload
 // a snapshot, nil when ctx is cancelled, or another error on disconnect.
 func (c *Client) Stream(ctx context.Context, after int64, fn func(api.Event)) error {
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://askgate/v1/events?follow=1&after="+strconv.FormatInt(after, 10), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", "http://pilothouse/v1/events?follow=1&after="+strconv.FormatInt(after, 10), nil)
 	if err != nil {
 		return err
 	}

@@ -113,7 +113,7 @@ self.addEventListener('notificationclick', (e) => {
   n.close();
   if ((e.action === 'allow' || e.action === 'deny') && data.request_id) {
     e.waitUntil((async () => {
-      const res = await self.AskgateKeys.decide(data.request_id, e.action, 'once', '');
+      const res = await self.PilothouseKeys.decide(data.request_id, e.action, 'once', '');
       if (res.ok) {
         await tell(e.action === 'allow' ? 'Allowed' : 'Denied', true);
         return;

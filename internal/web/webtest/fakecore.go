@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/core"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/core"
 )
 
 // FakeCore is a goroutine-safe core.Core backed by maps.

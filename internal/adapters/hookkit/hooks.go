@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-// Spec is one hook handler Askgate wants wired for one vendor event, in
+// Spec is one hook handler Pilothouse wants wired for one vendor event, in
 // the Claude-style hooks schema both agents use:
 //
 //	{"hooks": {"<Event>": [{"matcher": "*", "hooks": [{"type": "command", "command": "…", "timeout": 30}]}]}}
@@ -63,7 +63,7 @@ type Result struct {
 	Moved   map[Ref]Ref    // foreign handlers whose position changed
 }
 
-// Owned reports whether a handler command belongs to Askgate.
+// Owned reports whether a handler command belongs to Pilothouse.
 type Owned func(command string) bool
 
 // Apply makes the hooks object under the top-level "hooks" key contain

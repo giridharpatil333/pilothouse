@@ -5,10 +5,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/policy"
-	"github.com/xasdta/askgate/internal/state"
-	"github.com/xasdta/askgate/internal/store"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/policy"
+	"github.com/xasdta/pilothouse/internal/state"
+	"github.com/xasdta/pilothouse/internal/store"
 )
 
 const (
@@ -74,7 +74,7 @@ func (d *Daemon) loadDefaultPolicy() PolicyEngine {
 	for _, a := range d.adapters {
 		protected = append(protected, a.ProtectedPaths()...)
 	}
-	// DefaultOptions always protects the Askgate home and socket directory.
+	// DefaultOptions always protects the Pilothouse home and socket directory.
 	e, _ := policy.Load(policy.DefaultOptions(protected...))
 	return e
 }

@@ -2,7 +2,7 @@
 
 package proc
 
-import "github.com/xasdta/askgate/internal/adapters"
+import "github.com/xasdta/pilothouse/internal/adapters"
 
 func info(int) (adapters.Proc, error) { return adapters.Proc{}, ErrUnsupported }
 

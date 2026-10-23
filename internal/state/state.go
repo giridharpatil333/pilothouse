@@ -1,13 +1,13 @@
 // Package state resolves a session's state from the evidence the daemon has
 // collected about it (BUILD-SPEC §7). It is pure: the daemon gathers the
 // inputs, Resolve picks the state and names the rule that picked it so
-// `askgate explain` can show its reasoning.
+// `pilothouse explain` can show its reasoning.
 package state
 
 import (
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 const (

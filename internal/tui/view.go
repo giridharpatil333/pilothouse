@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 const minWidth = 60
@@ -91,7 +91,7 @@ func (m *Model) listLines(w int) (lines []string, idx []int) {
 			if len(m.rows) == 0 {
 				add("", -1)
 				add("   "+m.st.dim.Render("No agent sessions yet. Start Claude Code or Codex as usual and they"), -1)
-				add("   "+m.st.dim.Render("show up here, or run one you can detach from: ")+m.st.bold.Render("askgate run claude"), -1)
+				add("   "+m.st.dim.Render("show up here, or run one you can detach from: ")+m.st.bold.Render("pilothouse run claude"), -1)
 			}
 			continue
 		}
@@ -326,7 +326,7 @@ func (m *Model) renderRow(r row, w int, sel bool) string {
 func (m *Model) View() string {
 	w, h := m.size()
 	if w < minWidth {
-		return padLines(wrap(fmt.Sprintf("askgate needs at least %d columns (this terminal has %d). Widen the window, or use `askgate ls`. q quits.", minWidth, w), w), h)
+		return padLines(wrap(fmt.Sprintf("pilothouse needs at least %d columns (this terminal has %d). Widen the window, or use `pilothouse ls`. q quits.", minWidth, w), w), h)
 	}
 	if !m.loaded {
 		return m.viewNotLoaded(w, h)
@@ -391,7 +391,7 @@ func padLines(lines []string, h int) string {
 }
 
 func (m *Model) viewHeader(w int) string {
-	left := " " + m.st.brand.Render("askgate")
+	left := " " + m.st.brand.Render("pilothouse")
 	if m.machine != "" {
 		left += m.st.dim.Render("  " + m.machine)
 	}
@@ -454,7 +454,7 @@ func (m *Model) bannerText() string {
 	if m.connErr != nil && strings.Contains(m.connErr.Error(), "not running") {
 		why = "the daemon stopped"
 	}
-	return fmt.Sprintf("⚠ Offline: %s · retrying %s · showing the last known state · start it with `askgate start`", why, when)
+	return fmt.Sprintf("⚠ Offline: %s · retrying %s · showing the last known state · start it with `pilothouse start`", why, when)
 }
 
 func (m *Model) viewFlash(w int) string {
@@ -673,7 +673,7 @@ func (m *Model) viewHelp(w, h int) []string {
 		k("away", "requests are held and sent to your paired phone"),
 		k("auto", "here or away from keyboard and mouse idle time"),
 		"",
-		"   " + m.st.dim.Render(trunc("From any shell: askgate approve <id> · askgate deny <id> -m \"why\" · askgate ls", w-4)),
+		"   " + m.st.dim.Render(trunc("From any shell: pilothouse approve <id> · pilothouse deny <id> -m \"why\" · pilothouse ls", w-4)),
 	}
 	return fill(lines, h)
 }
@@ -726,18 +726,18 @@ func (m *Model) viewNotLoaded(w, h int) string {
 			return "   " + m.st.dim.Render(fmt.Sprintf("%-26s", desc)) + m.st.bold.Render(cmd)
 		}
 		body = []string{
-			" " + m.st.brand.Render("askgate"),
+			" " + m.st.brand.Render("pilothouse"),
 			"",
-			"   " + m.st.err.Render("✗") + " " + m.st.bold.Render("The Askgate daemon isn't running."),
+			"   " + m.st.err.Render("✗") + " " + m.st.bold.Render("The Pilothouse daemon isn't running."),
 			"",
-			k("Start it now", "askgate start"),
-			k("Start it at every login", "askgate service install"),
-			k("First time here?", "askgate setup"),
+			k("Start it now", "pilothouse start"),
+			k("Start it at every login", "pilothouse service install"),
+			k("First time here?", "pilothouse setup"),
 			"",
 			"   " + m.st.dim.Render("Retrying every 2s · q to quit"),
 		}
 	} else {
-		body = []string{" " + m.st.brand.Render("askgate"), "", "   " + m.st.dim.Render("Connecting to the Askgate daemon…")}
+		body = []string{" " + m.st.brand.Render("pilothouse"), "", "   " + m.st.dim.Render("Connecting to the Pilothouse daemon…")}
 		if m.connErr != nil {
 			body = append(body, "", "   "+m.st.warn.Render(trunc(m.connErr.Error(), w-6)), "   "+m.st.dim.Render("Retrying · q to quit"))
 		}

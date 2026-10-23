@@ -17,15 +17,15 @@ type AgentKind string
 const (
 	AgentClaude  AgentKind = "claude"
 	AgentCodex   AgentKind = "codex"
-	AgentGeneric AgentKind = "generic" // anything run under `askgate run` without an adapter
+	AgentGeneric AgentKind = "generic" // anything run under `pilothouse run` without an adapter
 )
 
-// Mode is how Askgate is attached to a session.
+// Mode is how Pilothouse is attached to a session.
 type Mode string
 
 const (
 	ModeObserved Mode = "observed" // hooks only; the agent runs in any terminal
-	ModeWrapped  Mode = "wrapped"  // started with `askgate run`; Askgate holds the PTY
+	ModeWrapped  Mode = "wrapped"  // started with `pilothouse run`; Pilothouse holds the PTY
 )
 
 // State is the resolved state of a session.
@@ -102,7 +102,7 @@ type RequestStatus string
 
 const (
 	RequestOpen            RequestStatus = "open"             // held, waiting for an answer
-	RequestDecided         RequestStatus = "decided"          // answered through Askgate
+	RequestDecided         RequestStatus = "decided"          // answered through Pilothouse
 	RequestSteppedAside    RequestStatus = "stepped_aside"    // handed to the agent's own dialog
 	RequestAnsweredLocally RequestStatus = "answered_locally" // a person answered in the terminal
 	RequestExpired         RequestStatus = "expired"          // hold limit hit; handed back
@@ -190,7 +190,7 @@ const (
 	EventPresenceChanged EventType = "presence.changed"
 	EventDeviceChanged   EventType = "device.changed"
 	EventTaskUpdated     EventType = "task.updated"
-	EventHook            EventType = "hook" // raw normalized hook, kept for `askgate explain`
+	EventHook            EventType = "hook" // raw normalized hook, kept for `pilothouse explain`
 )
 
 // Event is one entry in the append-only log. Seq is strictly increasing.

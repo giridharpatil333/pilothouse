@@ -12,13 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
-// testEnv points every Askgate location at temp dirs (BUILD-SPEC §2.1).
+// testEnv points every Pilothouse location at temp dirs (BUILD-SPEC §2.1).
 type testEnv struct {
 	home   string // fake user home
-	agHome string // fake ~/.askgate
+	agHome string // fake ~/.pilothouse
 	run    string
 	repo   string // a fake git repo root
 }
@@ -34,10 +34,10 @@ func newTestEnv(t testing.TB) *testEnv {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(run) })
-	te := &testEnv{home: home, agHome: filepath.Join(home, ".askgate"), run: run, repo: filepath.Join(home, "src", "app")}
-	t.Setenv("ASKGATE_HOME", te.agHome)
-	t.Setenv("ASKGATE_USER_HOME", te.home)
-	t.Setenv("ASKGATE_RUN_DIR", te.run)
+	te := &testEnv{home: home, agHome: filepath.Join(home, ".pilothouse"), run: run, repo: filepath.Join(home, "src", "app")}
+	t.Setenv("PILOTHOUSE_HOME", te.agHome)
+	t.Setenv("PILOTHOUSE_USER_HOME", te.home)
+	t.Setenv("PILOTHOUSE_RUN_DIR", te.run)
 	for _, d := range []string{te.agHome, te.repo} {
 		if err := os.MkdirAll(d, 0o700); err != nil {
 			t.Fatal(err)
@@ -409,7 +409,7 @@ func TestInvalidAtFirstLoad(t *testing.T) {
 		t.Fatalf("status %+v", st)
 	}
 	// Built-ins still work.
-	if r := e.Evaluate(shell("askgate approve r_1")); r.Action != api.BehaviorAsk {
+	if r := e.Evaluate(shell("pilothouse approve r_1")); r.Action != api.BehaviorAsk {
 		t.Fatalf("builtin: %+v", r)
 	}
 }

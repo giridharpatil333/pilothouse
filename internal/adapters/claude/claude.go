@@ -1,11 +1,11 @@
 // Package claude adapts Claude Code: it parses Claude Code's hook payloads,
-// answers them in its hook protocol and wires `askgate hook claude` into
+// answers them in its hook protocol and wires `pilothouse hook claude` into
 // ~/.claude/settings.json.
 //
 // Reference: https://code.claude.com/docs/en/hooks (hook events, stdin
 // fields, matcher syntax, exit codes, PreToolUse permissionDecision and
 // PermissionRequest decision.behavior outputs). docs/AGENTS.md summarizes
-// what Askgate relies on.
+// what Pilothouse relies on.
 package claude
 
 import (
@@ -13,10 +13,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/hookkit"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/hookkit"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 // PermissionTimeout is the hook timeout written for PermissionRequest, in

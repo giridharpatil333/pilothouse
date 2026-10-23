@@ -4,7 +4,7 @@
   "scope": "session",
   "ts": 1767225600000,
   "nonce": "bm9uY2Utd2ViY3J5cHRvLTE",
-  "public_key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEDSk31PkPwGg_EAIo621E1m_bBqvx3FW1Rc-ffWNbGMSdW_znUzqSIJw9DunuxV2ImkM_QEtphFk_8FP1zCKzw",
-  "canonical": "askgate-decide:v1\nr_fixture001\nallow\nsession\n1767225600000\nbm9uY2Utd2ViY3J5cHRvLTE",
-  "sig": "zQ-Ia33dv3AytvCzbdSYn3MBtDD1vsHPRIwCpA9fVh3tPqZHSvIVFbxlFpYkO4apdp5sxRInajWtLgKKcU1l_Q"
+  "public_key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3h-JiH9EDK_Z3a1M6v9xUi_8VAnRKNJs8UYhV3W5lPL1aXL6nXLeNGuKPsVH45vccSOWtzced-QxHC2sXlJ7XQ",
+  "canonical": "pilothouse-decide:v1\nr_fixture001\nallow\nsession\n1767225600000\nbm9uY2Utd2ViY3J5cHRvLTE",
+  "sig": "sNTE6lIM1UVLZfCPGglc66iFIyQXcAFcFWQea0qIX7jHsH8wIW2jywU8SAtlJ_T9YH87qBsbgLpZe8k8pZK-JQ"
 }

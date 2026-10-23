@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/hookkit"
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/hookkit"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // kinds maps Codex hook events (codex-rs/hooks/src/lib.rs HOOK_EVENT_NAMES)
-// to Askgate's. Interrupt (the person pressed Esc) ends the turn the same
+// to Pilothouse's. Interrupt (the person pressed Esc) ends the turn the same
 // way Stop does: the session now waits for its next prompt.
 var kinds = map[string]adapters.HookKind{
 	"SessionStart":      adapters.HookSessionStart,

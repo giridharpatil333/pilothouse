@@ -1,4 +1,4 @@
-// Package wrap implements `askgate run`: a dtach-style holder process that
+// Package wrap implements `pilothouse run`: a dtach-style holder process that
 // owns an agent's PTY and outlives terminals and daemon restarts, the
 // frame protocol on its Unix socket, the attach client, and the OSC 7501
 // status parser (BUILD-SPEC §9).
@@ -21,9 +21,9 @@ import (
 
 	"github.com/creack/pty"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 const (
@@ -50,7 +50,7 @@ const (
 type HolderConfig struct {
 	SessionID string        // required; see NewSessionID
 	Name      string        // title shown in lists; default: basename of Dir
-	TaskID    string        // set for `askgate task` sessions
+	TaskID    string        // set for `pilothouse task` sessions
 	Agent     api.AgentKind // default: KindFromCommand(Argv[0])
 	Argv      []string      // command and arguments; required
 	Dir       string        // working directory; default: current
@@ -302,17 +302,17 @@ func (h *Holder) startChild() error {
 	if base == nil {
 		base = os.Environ()
 	}
-	// `askgate run` started from inside another wrapped session must not
+	// `pilothouse run` started from inside another wrapped session must not
 	// inherit that session's identity or task.
 	env := make([]string, 0, len(base)+4)
 	for _, kv := range base {
-		if !strings.HasPrefix(kv, "ASKGATE_SESSION_ID=") && !strings.HasPrefix(kv, "ASKGATE_TASK_ID=") {
+		if !strings.HasPrefix(kv, "PILOTHOUSE_SESSION_ID=") && !strings.HasPrefix(kv, "PILOTHOUSE_TASK_ID=") {
 			env = append(env, kv)
 		}
 	}
-	env = append(env, "ASKGATE=1", "ASKGATE_SESSION_ID="+h.cfg.SessionID)
+	env = append(env, "PILOTHOUSE=1", "PILOTHOUSE_SESSION_ID="+h.cfg.SessionID)
 	if h.cfg.TaskID != "" {
-		env = append(env, "ASKGATE_TASK_ID="+h.cfg.TaskID)
+		env = append(env, "PILOTHOUSE_TASK_ID="+h.cfg.TaskID)
 	}
 	if !hasEnv(env, "TERM") {
 		// The holder has no terminal of its own; agents need a TERM to

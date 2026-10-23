@@ -1,13 +1,13 @@
-# Written by askgate service install. Changes are overwritten.
+# Written by pilothouse service install. Changes are overwritten.
 [Unit]
-Description=Askgate daemon: one inbox for every coding agent
-Documentation=https://github.com/xasdta/askgate
+Description=Pilothouse daemon: one inbox for every coding agent
+Documentation=https://github.com/xasdta/pilothouse
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/askgate daemon --log-file /opt/askgate-test/home/logs/daemon.log
-Environment=ASKGATE_HOME=/opt/askgate-test/home
+ExecStart=/usr/local/bin/pilothouse daemon --log-file /opt/pilothouse-test/home/logs/daemon.log
 Environment=PATH=/opt/homebrew/bin:/usr/bin:/bin
+Environment=PILOTHOUSE_HOME=/opt/pilothouse-test/home
 Restart=on-failure
 RestartSec=2
 KillMode=process

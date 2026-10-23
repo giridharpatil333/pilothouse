@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xasdta/askgate/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters"
 )
 
 const existingSettings = `{
@@ -62,7 +62,7 @@ func writeSettings(t *testing.T, home, content string) string {
 
 func fakeShim(t *testing.T) string {
 	t.Helper()
-	p := filepath.Join(t.TempDir(), "bin", "askgate")
+	p := filepath.Join(t.TempDir(), "bin", "pilothouse")
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func fakeShim(t *testing.T) string {
 
 func backups(t *testing.T, settings string) []string {
 	t.Helper()
-	m, _ := filepath.Glob(settings + ".askgate-bak-*")
+	m, _ := filepath.Glob(settings + ".pilothouse-bak-*")
 	return m
 }
 
@@ -272,7 +272,7 @@ func TestStatusDisableAllHooks(t *testing.T) {
 func TestInstallQuotesShimPath(t *testing.T) {
 	isolate(t)
 	dir := filepath.Join(t.TempDir(), "My Tools")
-	shim := filepath.Join(dir, "askgate")
+	shim := filepath.Join(dir, "pilothouse")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}

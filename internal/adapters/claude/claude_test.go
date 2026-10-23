@@ -10,25 +10,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 var update = flag.Bool("update", false, "rewrite golden files")
 
-// isolate points every Askgate path at temp dirs (BUILD-SPEC invariant 1):
+// isolate points every Pilothouse path at temp dirs (BUILD-SPEC invariant 1):
 // these tests write settings files and must never see the real home.
 func isolate(t *testing.T) (userHome string) {
 	t.Helper()
 	userHome = t.TempDir()
-	t.Setenv("ASKGATE_HOME", t.TempDir())
-	t.Setenv("ASKGATE_USER_HOME", userHome)
+	t.Setenv("PILOTHOUSE_HOME", t.TempDir())
+	t.Setenv("PILOTHOUSE_USER_HOME", userHome)
 	run, err := os.MkdirTemp("/tmp", "ag")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(run) })
-	t.Setenv("ASKGATE_RUN_DIR", run)
+	t.Setenv("PILOTHOUSE_RUN_DIR", run)
 	return userHome
 }
 
@@ -182,9 +182,9 @@ func TestEncodeResponse(t *testing.T) {
 		{"pre deny", ev(adapters.HookPreTool), adapters.HookOutcome{Behavior: api.BehaviorDeny, Message: "Force-push is blocked by policy. Open a PR instead."},
 			`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Force-push is blocked by policy. Open a PR instead."}}`},
 		{"pre deny no message", ev(adapters.HookPreTool), adapters.HookOutcome{Behavior: api.BehaviorDeny},
-			`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Blocked by Askgate policy."}}`},
-		{"pre ask", ev(adapters.HookPreTool), adapters.HookOutcome{Behavior: api.BehaviorAsk, Message: "Edits to agent settings need a person (askgate-self-protection)"},
-			`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","permissionDecisionReason":"Edits to agent settings need a person (askgate-self-protection)"}}`},
+			`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Blocked by Pilothouse policy."}}`},
+		{"pre ask", ev(adapters.HookPreTool), adapters.HookOutcome{Behavior: api.BehaviorAsk, Message: "Edits to agent settings need a person (pilothouse-self-protection)"},
+			`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","permissionDecisionReason":"Edits to agent settings need a person (pilothouse-self-protection)"}}`},
 		{"pre none", ev(adapters.HookPreTool), adapters.HookOutcome{}, ``},
 		{"permission allow", ev(adapters.HookPermission), adapters.HookOutcome{Behavior: api.BehaviorAllow},
 			`{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}`},
@@ -192,8 +192,8 @@ func TestEncodeResponse(t *testing.T) {
 			`{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Not now <phone>"}}}`},
 		{"permission none", ev(adapters.HookPermission), adapters.HookOutcome{}, ``},
 		{"permission ask", ev(adapters.HookPermission), adapters.HookOutcome{Behavior: api.BehaviorAsk}, ``},
-		{"session context", ev(adapters.HookSessionStart), adapters.HookOutcome{Context: "Askgate is watching."},
-			`{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Askgate is watching."}}`},
+		{"session context", ev(adapters.HookSessionStart), adapters.HookOutcome{Context: "Pilothouse is watching."},
+			`{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Pilothouse is watching."}}`},
 		{"prompt block", ev(adapters.HookPromptSubmit), adapters.HookOutcome{Behavior: api.BehaviorDeny, Message: "no"},
 			`{"decision":"block","reason":"no"}`},
 		{"prompt none", ev(adapters.HookPromptSubmit), adapters.HookOutcome{}, ``},
@@ -218,7 +218,7 @@ func TestFailResponse(t *testing.T) {
 		}
 	}
 	r := a.FailResponse(adapters.HookPreTool, true)
-	if !strings.Contains(r.Stdout, `"permissionDecision":"deny"`) || !strings.Contains(r.Stdout, "askgate start") || r.ExitCode != 0 {
+	if !strings.Contains(r.Stdout, `"permissionDecision":"deny"`) || !strings.Contains(r.Stdout, "pilothouse start") || r.ExitCode != 0 {
 		t.Errorf("fail-closed = %+v", r)
 	}
 	if r := a.FailResponse(adapters.HookPermission, true); r != (adapters.HookResponse{}) {

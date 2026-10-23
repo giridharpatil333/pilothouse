@@ -1,10 +1,10 @@
-# Agents: what Askgate can and cannot do with each one
+# Agents: what Pilothouse can and cannot do with each one
 
-Askgate talks to coding agents through their **hooks**: the agent runs
-`askgate hook <agent>` at fixed points, pipes a JSON payload to it, and reads
+Pilothouse talks to coding agents through their **hooks**: the agent runs
+`pilothouse hook <agent>` at fixed points, pipes a JSON payload to it, and reads
 the answer from its stdout. The shim forwards the payload to the daemon and
 prints the daemon's answer; if the daemon is down or slow it prints nothing and
-exits 0, so the agent behaves as if Askgate were not installed (fail open).
+exits 0, so the agent behaves as if Pilothouse were not installed (fail open).
 
 This page records what each agent really supports, with sources, as of
 2026-10-22. It is the reference for `internal/adapters/claude` and
@@ -14,7 +14,7 @@ This page records what each agent really supports, with sources, as of
 
 | | Claude Code | Codex CLI |
 |---|---|---|
-| Hook config Askgate edits | `~/.claude/settings.json` | `~/.codex/hooks.json` + trust entries in `~/.codex/config.toml` |
+| Hook config Pilothouse edits | `~/.claude/settings.json` | `~/.codex/hooks.json` + trust entries in `~/.codex/config.toml` |
 | State detection | Full: session start/end, prompt, every tool call, permission prompts, notifications (idle, permission waiting), stop | Full except notifications: session start/end, prompt, tool calls, permission prompts, stop, **interrupt** |
 | Policy `deny` (before every tool call) | Yes (`PreToolUse` → `permissionDecision: "deny"`) | Yes (`PreToolUse` → `permissionDecision: "deny"` + reason) |
 | Policy `ask` (force the agent's prompt) | Yes (`permissionDecision: "ask"`) | **No.** Codex rejects `ask` as unsupported; its own `approval_policy` decides |
@@ -24,9 +24,9 @@ This page records what each agent really supports, with sources, as of
 | OSC 7501 status (wrap mode, L1) | Emits it (v2.1.295+) when it detects terminal support | Emits it whenever stdout is a terminal |
 
 "Remote approvals" means: when the person is away, the hook holds the agent's
-permission request while Askgate pushes it to a paired device, and the answer
+permission request while Pilothouse pushes it to a paired device, and the answer
 goes back through the hook. When the person is at the desk the hook returns
-no opinion immediately and the agent's own dialog appears (Askgate notifies
+no opinion immediately and the agent's own dialog appears (Pilothouse notifies
 if it waits longer than `presence.notify_after`).
 
 ## Claude Code
@@ -37,15 +37,15 @@ Source: <https://code.claude.com/docs/en/hooks> (hooks reference) and
 **2.1.309** headless runs (files named `doc_*` are copied from the reference
 for events a headless run cannot trigger). An end-to-end run of 2.1.309
 through the real shim confirmed that a `PreToolUse` deny blocks the call with
-Askgate's reason and that a `PermissionRequest` allow lets a `Write` through
+Pilothouse's reason and that a `PermissionRequest` allow lets a `Write` through
 that `claude -p` would otherwise deny.
 
-### What `askgate hooks install` writes
+### What `pilothouse hooks install` writes
 
 One matcher group per event, appended after the person's own groups, each
-with a single handler `{"type": "command", "command": "<askgate> hook claude"}`:
+with a single handler `{"type": "command", "command": "<pilothouse> hook claude"}`:
 
-| Event | Matcher | Timeout | Askgate kind |
+| Event | Matcher | Timeout | Pilothouse kind |
 |---|---|---|---|
 | `SessionStart` | (all) | default | `session_start` |
 | `SessionEnd` | (all) | default (Claude's whole SessionEnd budget is 1.5 s; the shim gives up after 1 s) | `session_end` |
@@ -58,10 +58,10 @@ with a single handler `{"type": "command", "command": "<askgate> hook claude"}`:
 | `Stop` | n/a | default | `stop` |
 | `SubagentStop` | (all) | default | `subagent_stop` |
 
-Our handlers are recognized by a command of the form `…/askgate* hook claude`.
+Our handlers are recognized by a command of the form `…/pilothouse* hook claude`.
 Install is idempotent, keeps every other key and hook (key order and
 indentation too), writes atomically, follows a symlinked `settings.json`, backs
-the file up to `settings.json.askgate-bak-<unix>` before changing it, and
+the file up to `settings.json.pilothouse-bak-<unix>` before changing it, and
 refuses to touch a file that is not valid JSON. Uninstall removes exactly our
 handlers (and any group, event list or `hooks` key left empty by that).
 
@@ -92,7 +92,7 @@ Everything exits 0; decisions are JSON on stdout.
   `{"behavior": "deny", "message": "…"}`. No output = the native dialog shows.
 - `SessionStart` / `UserPromptSubmit`: optional `additionalContext`.
 - Others: no output. (`Stop` with `decision: "block"` would keep Claude
-  working, which Askgate never wants.)
+  working, which Pilothouse never wants.)
 
 ### Caveats
 
@@ -101,7 +101,7 @@ Everything exits 0; decisions are JSON on stdout.
   hook, and the shim forwards `$TMUX`/`$TERM_PROGRAM` so the daemon can say
   where the session lives. (Inside tmux, Claude Code asks tmux rather than the
   outer terminal whether OSC 7501 is supported; see the terminal docs.)
-- `"disableAllHooks": true` turns Askgate off; `askgate hooks status` reports it.
+- `"disableAllHooks": true` turns Pilothouse off; `pilothouse hooks status` reports it.
   Managed settings with `allowManagedHooksOnly` block user hooks entirely.
 - `PermissionRequest` does not fire for a sandboxed command's network request;
   only the `Notification` `permission_prompt` does (after ~6 s without typing),
@@ -110,9 +110,9 @@ Everything exits 0; decisions are JSON on stdout.
   ~6 s / ~60 s without keystrokes.
 - Anyone who can edit a settings file can add a hook that approves everything;
   `ProtectedPaths()` lists the user, project and local settings files so the
-  built-in `askgate-self-protection` rule forces a person to approve such edits.
+  built-in `pilothouse-self-protection` rule forces a person to approve such edits.
   Hooks can also come from plugins, skills and subagent frontmatter, which
-  Askgate does not police in v0.1.
+  Pilothouse does not police in v0.1.
 - Settings edits are normally picked up by running sessions; restart a session
   if the hooks do not appear.
 
@@ -138,7 +138,7 @@ There is **no Notification event**.
 Hooks are read from `hooks.json` next to each config layer (`~/.codex/hooks.json`
 for the user; `<repo>/.codex/hooks.json` for projects) or from `[hooks]` tables
 in `config.toml`, in the same JSON shape as Claude Code
-(`codex-rs/hooks/src/engine/discovery.rs`). Askgate writes `hooks.json` (Codex
+(`codex-rs/hooks/src/engine/discovery.rs`). Pilothouse writes `hooks.json` (Codex
 warns if a layer uses both forms). Command hooks run through
 `$SHELL -lc "<command>"` in a new session, with stdin JSON and stdout JSON
 (`codex-rs/hooks/src/engine/command_runner.rs`). Default timeout 600 s;
@@ -154,22 +154,22 @@ listed as "new — review required" and skipped (`hook_trust_status`,
 `hook_hash` in `discovery.rs`; `hook_key` in `hooks/src/lib.rs`;
 `version_for_toml` in `codex-rs/config/src/fingerprint.rs`).
 
-`askgate hooks install --agent codex` computes those hashes and adds one table
-per Askgate handler, each preceded by an `# askgate-managed` comment, using a
+`pilothouse hooks install --agent codex` computes those hashes and adds one table
+per Pilothouse handler, each preceded by an `# pilothouse-managed` comment, using a
 small line-based TOML editor that keeps every comment and unrelated line.
 Uninstall removes them and renames the trust entries of the person's own hooks
 whose position in `hooks.json` shifted, so their trust survives. If
-`config.toml` declares hook state with inline tables or dotted keys, Askgate
+`config.toml` declares hook state with inline tables or dotted keys, Pilothouse
 leaves it alone, installs the hooks untrusted and says so; Codex then asks the
-person to review them at startup (or in `/hooks`). `askgate hooks status`
-reports untrusted or modified Askgate hooks, and `[features] hooks = false`.
+person to review them at startup (or in `/hooks`). `pilothouse hooks status`
+reports untrusted or modified Pilothouse hooks, and `[features] hooks = false`.
 
 `~/.codex` is `$CODEX_HOME` (canonicalized) when set, as in
 `codex-rs/utils/home-dir`; the trust key embeds that path.
 
-### What `askgate hooks install --agent codex` writes
+### What `pilothouse hooks install --agent codex` writes
 
-| Event | Matcher | Timeout | Askgate kind |
+| Event | Matcher | Timeout | Pilothouse kind |
 |---|---|---|---|
 | `SessionStart` | (all) | default | `session_start` |
 | `SessionEnd` | (all) | 3 s | `session_end` |
@@ -191,7 +191,7 @@ Common: `session_id`, `turn_id`, `transcript_path` (the rollout file
 Tool names (`codex-rs/core/src/tools/hook_names.rs` and handlers):
 `Bash` with `{"command": "<string>"}` for `exec_command` (and for network-access
 approvals, with `description: "network-access <host>"`); `apply_patch` with
-`{"command": "<patch>"}` (Askgate extracts the file list from the `*** Add/
+`{"command": "<patch>"}` (Pilothouse extracts the file list from the `*** Add/
 Update/Delete File:` and `*** Move to:` lines); `mcp__<server>__<tool>` with
 the raw arguments; `write_stdin` (`chars` typed into a running command,
 classified as shell); `spawn_agent`, `request_permissions` and extension tools.
@@ -201,12 +201,12 @@ classified as shell); `spawn_agent`, `request_permissions` and extension tools.
 
 - `PreToolUse`: only `permissionDecision: "deny"` with a non-empty
   `permissionDecisionReason` is honored. `allow` without `updatedInput` and
-  `ask` are reported as unsupported and the hook counts as failed, so Askgate
+  `ask` are reported as unsupported and the hook counts as failed, so Pilothouse
   prints nothing for them. `continue: false`, `stopReason` and
   `suppressOutput` are rejected too.
 - `PermissionRequest`: `decision.behavior` `allow` | `deny` (+ `message`).
   Codex fails closed on `updatedInput`, `updatedPermissions` and
-  `interrupt: true`, so Askgate never sends them. Any deny wins over allows
+  `interrupt: true`, so Pilothouse never sends them. Any deny wins over allows
   from other hooks.
 - `SessionStart` / `UserPromptSubmit`: optional `additionalContext`.
 
@@ -220,7 +220,7 @@ classified as shell); `spawn_agent`, `request_permissions` and extension tools.
 - No `Notification` event: "blocked" comes from `PermissionRequest` (it fires
   before Codex shows its prompt), "waiting" from `Stop`/`Interrupt`.
 - Hooks run in a **login shell** (`$SHELL -lc`): anything a profile prints to
-  stdout lands in front of Askgate's JSON and Codex rejects the output (fail
+  stdout lands in front of Pilothouse's JSON and Codex rejects the output (fail
   open). Keep shell startup files quiet for non-interactive shells.
 - Hooks need `[features] hooks` on (the default) and are ignored when the
   admin sets `allow_managed_hooks_only = true` in `requirements.toml`.
@@ -229,7 +229,7 @@ classified as shell); `spawn_agent`, `request_permissions` and extension tools.
 - `notify` (`notify = ["program", …]` in config.toml) is a legacy fire-and-forget
   program run after each turn with one JSON argument
   (`codex-rs/hooks/src/legacy_notify.rs`, marked for removal). It cannot block
-  or answer anything and hooks cover it, so Askgate does not install it.
+  or answer anything and hooks cover it, so Pilothouse does not install it.
 
 ## OSC 7501 (for wrap mode)
 

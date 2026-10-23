@@ -52,7 +52,7 @@ func (t FrameType) String() string {
 const (
 	// ProtocolVersion is carried in both hellos; peers refuse a mismatch so
 	// an old attach client never misreads a newer holder (holders outlive
-	// upgrades of the askgate binary).
+	// upgrades of the pilothouse binary).
 	ProtocolVersion = 1
 
 	// MaxFrame bounds every payload.
@@ -237,7 +237,7 @@ func decodeHello(p []byte, v any, version func() int) error {
 		return fmt.Errorf("wrap: bad hello: %w", err)
 	}
 	if got := version(); got != ProtocolVersion {
-		return fmt.Errorf("wrap: holder protocol version %d, this askgate speaks %d — use the askgate binary that started the session", got, ProtocolVersion)
+		return fmt.Errorf("wrap: holder protocol version %d, this pilothouse speaks %d — use the pilothouse binary that started the session", got, ProtocolVersion)
 	}
 	return nil
 }

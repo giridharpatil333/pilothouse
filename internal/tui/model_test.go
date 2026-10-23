@@ -18,8 +18,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
 )
 
 var update = flag.Bool("update", false, "rewrite golden files")
@@ -126,8 +126,8 @@ func fixtureSnapshot() api.Snapshot {
 			State: api.PresencePresent, Mode: api.PresenceAuto, Source: "os_idle", ChangedAt: t0.Add(-time.Hour),
 		},
 		Sessions: []api.Session{
-			{ID: "s_k3m9q2xv7a", Agent: api.AgentClaude, Mode: api.ModeWrapped, Title: "askgate", Branch: "feat/inbox",
-				Cwd: "/home/dev/src/askgate", State: api.StateBlocked, BlockKind: api.BlockPermission, StateLayer: api.LayerHook,
+			{ID: "s_k3m9q2xv7a", Agent: api.AgentClaude, Mode: api.ModeWrapped, Title: "pilothouse", Branch: "feat/inbox",
+				Cwd: "/home/dev/src/pilothouse", State: api.StateBlocked, BlockKind: api.BlockPermission, StateLayer: api.LayerHook,
 				StateDetail: "Asked to run git push", LastMessage: "Tests pass. Pushing the branch so CI can run.",
 				StartedAt: t0.Add(-50 * time.Minute), UpdatedAt: t0.Add(-12 * time.Second)},
 			{ID: "s_p4t8w6n2rb", Agent: api.AgentCodex, Mode: api.ModeObserved, Title: "webapp", Branch: "checkout-v2",
@@ -143,8 +143,8 @@ func fixtureSnapshot() api.Snapshot {
 			{ID: "s_m8n6b4v2cx", Agent: api.AgentCodex, Mode: api.ModeObserved, Title: "infra", Branch: "tf-upgrade",
 				Cwd: "/home/dev/src/infra", State: api.StateWorking, StateLayer: api.LayerHook,
 				StateDetail: "Editing modules/vpc/main.tf", StartedAt: t0.Add(-35 * time.Minute), UpdatedAt: t0.Add(-41 * time.Second)},
-			{ID: "s_q9r7s5t3uv", Agent: api.AgentClaude, Mode: api.ModeObserved, Title: "askgate-site", Branch: "main",
-				Cwd: "/home/dev/src/askgate-site", State: api.StateWaiting, StateLayer: api.LayerHook, Unseen: true,
+			{ID: "s_q9r7s5t3uv", Agent: api.AgentClaude, Mode: api.ModeObserved, Title: "pilothouse-site", Branch: "main",
+				Cwd: "/home/dev/src/pilothouse-site", State: api.StateWaiting, StateLayer: api.LayerHook, Unseen: true,
 				LastMessage: "Done. The landing page now loads in 380 ms. Want me to add the pricing section next?",
 				StartedAt:   t0.Add(-3 * time.Hour), UpdatedAt: t0.Add(-2*time.Minute - 5*time.Second)},
 			{ID: "s_e5f6g7h8ij", Agent: api.AgentGeneric, Mode: api.ModeWrapped, Title: "scratch",
@@ -157,7 +157,7 @@ func fixtureSnapshot() api.Snapshot {
 		Requests: []api.Request{
 			{ID: "r_7hq2m4k9pd", SessionID: "s_k3m9q2xv7a", Agent: api.AgentClaude, Checkpoint: api.CheckpointPermission,
 				Tool: "Bash", ToolKind: api.ToolShell, Command: "git push origin feat/inbox --force-with-lease",
-				Summary: "Run: git push origin feat/inbox --force-with-lease", Cwd: "/home/dev/src/askgate",
+				Summary: "Run: git push origin feat/inbox --force-with-lease", Cwd: "/home/dev/src/pilothouse",
 				Status: api.RequestOpen, Route: api.RouteDevices, PolicyRule: "ask-on-push",
 				CreatedAt: t0.Add(-12 * time.Second), ExpiresAt: t0.Add(8*time.Minute + 48*time.Second)},
 			{ID: "r_b3c5d7e9fg", SessionID: "s_p4t8w6n2rb", Agent: api.AgentCodex, Checkpoint: api.CheckpointPermission,
@@ -179,8 +179,8 @@ func plainRenderer() *lipgloss.Renderer {
 
 func newTestModel(t *testing.T, be *fakeBackend, w, h int) *Model {
 	t.Helper()
-	t.Setenv("ASKGATE_USER_HOME", "/home/dev")
-	m := New(Options{Backend: be, Exe: "/usr/local/bin/askgate", Now: func() time.Time { return t0 }, Renderer: plainRenderer(), NoTick: true})
+	t.Setenv("PILOTHOUSE_USER_HOME", "/home/dev")
+	m := New(Options{Backend: be, Exe: "/usr/local/bin/pilothouse", Now: func() time.Time { return t0 }, Renderer: plainRenderer(), NoTick: true})
 	m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	return m
 }
@@ -301,7 +301,7 @@ func TestDaemonDownScreen(t *testing.T) {
 		t.Fatal("must schedule a retry")
 	}
 	golden(t, "down_80x20", m.View())
-	if !strings.Contains(m.View(), "askgate start") {
+	if !strings.Contains(m.View(), "pilothouse start") {
 		t.Fatal("down screen must say how to start the daemon")
 	}
 }
@@ -684,7 +684,7 @@ func TestAge(t *testing.T) {
 }
 
 func TestDescribeErr(t *testing.T) {
-	if !strings.Contains(describeErr(client.ErrDaemonDown, "x"), "askgate start") {
+	if !strings.Contains(describeErr(client.ErrDaemonDown, "x"), "pilothouse start") {
 		t.Fatal("daemon down must say how to start")
 	}
 	if !strings.Contains(describeErr(errors.New("boom"), "answer"), "Couldn't answer: boom") {

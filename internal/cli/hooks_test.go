@@ -15,13 +15,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/all"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/all"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 // hkEnv isolates a test (BUILD-SPEC invariant 1) and returns the env for
-// a child askgate process.
+// a child pilothouse process.
 func hkEnv(t *testing.T) []string {
 	t.Helper()
 	home, user := t.TempDir(), t.TempDir()
@@ -30,17 +30,17 @@ func hkEnv(t *testing.T) []string {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(run) })
-	t.Setenv("ASKGATE_HOME", home)
-	t.Setenv("ASKGATE_USER_HOME", user)
-	t.Setenv("ASKGATE_RUN_DIR", run)
+	t.Setenv("PILOTHOUSE_HOME", home)
+	t.Setenv("PILOTHOUSE_USER_HOME", user)
+	t.Setenv("PILOTHOUSE_RUN_DIR", run)
 	t.Setenv("CODEX_HOME", "")
 	var env []string
 	for _, kv := range os.Environ() {
-		if !strings.HasPrefix(kv, "ASKGATE_") && !strings.HasPrefix(kv, "TMUX=") && !strings.HasPrefix(kv, "CODEX_HOME=") {
+		if !strings.HasPrefix(kv, "PILOTHOUSE_") && !strings.HasPrefix(kv, "TMUX=") && !strings.HasPrefix(kv, "CODEX_HOME=") {
 			env = append(env, kv)
 		}
 	}
-	return append(env, "ASKGATE_HOME="+home, "ASKGATE_USER_HOME="+user, "ASKGATE_RUN_DIR="+run, "ASKGATE_NO_UPDATE_CHECK=1")
+	return append(env, "PILOTHOUSE_HOME="+home, "PILOTHOUSE_USER_HOME="+user, "PILOTHOUSE_RUN_DIR="+run, "PILOTHOUSE_NO_UPDATE_CHECK=1")
 }
 
 var (
@@ -49,7 +49,7 @@ var (
 	hkBinErr  error
 )
 
-// TestMain removes the askgate binary the shim tests build (shared by
+// TestMain removes the pilothouse binary the shim tests build (shared by
 // several tests, so no single t.TempDir can own it).
 func TestMain(m *testing.M) {
 	code := m.Run()
@@ -59,24 +59,24 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// hkBinary builds cmd/askgate once per test run.
+// hkBinary builds cmd/pilothouse once per test run.
 func hkBinary(t *testing.T) string {
 	t.Helper()
 	hkBinOnce.Do(func() {
-		dir, err := os.MkdirTemp("", "askgate-bin")
+		dir, err := os.MkdirTemp("", "pilothouse-bin")
 		if err != nil {
 			hkBinErr = err
 			return
 		}
-		hkBin = filepath.Join(dir, "askgate")
-		out, err := exec.Command("go", "build", "-o", hkBin, "github.com/xasdta/askgate/cmd/askgate").CombinedOutput()
+		hkBin = filepath.Join(dir, "pilothouse")
+		out, err := exec.Command("go", "build", "-o", hkBin, "github.com/xasdta/pilothouse/cmd/pilothouse").CombinedOutput()
 		if err != nil {
 			hkBinErr = err
 			t.Logf("%s", out)
 		}
 	})
 	if hkBinErr != nil {
-		t.Fatalf("build askgate: %v", hkBinErr)
+		t.Fatalf("build pilothouse: %v", hkBinErr)
 	}
 	return hkBin
 }
@@ -189,7 +189,7 @@ func TestShimNoDaemonFailClosed(t *testing.T) {
 
 func TestShimForwardsToDaemon(t *testing.T) {
 	env := hkEnv(t)
-	env = append(env, "TMUX=/tmp/tmux-1/default,1,0", "ASKGATE_SESSION_ID=s_abcdefghij", "SECRET_TOKEN=nope")
+	env = append(env, "TMUX=/tmp/tmux-1/default,1,0", "PILOTHOUSE_SESSION_ID=s_abcdefghij", "SECRET_TOKEN=nope")
 	want := adapters.HookResponse{Stdout: `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"no"}}` + "\n"}
 	got := hkFakeDaemon(t, func(adapters.HookEnvelope) (adapters.HookResponse, time.Duration) { return want, 0 })
 	payload := hkFixture(t, "pre_tool_bash")
@@ -208,8 +208,8 @@ func TestShimForwardsToDaemon(t *testing.T) {
 	if env1.ShimPID <= 0 || len(env1.Ancestors) == 0 || env1.Ancestors[0].PID != os.Getpid() {
 		t.Errorf("process context: pid=%d ancestors=%+v (want parent %d)", env1.ShimPID, env1.Ancestors, os.Getpid())
 	}
-	if env1.AskgateSessionID != "s_abcdefghij" || env1.Env["TMUX"] == "" || env1.Env["SECRET_TOKEN"] != "" || env1.Env["ASKGATE_SESSION_ID"] == "" {
-		t.Errorf("env: session=%q env=%v", env1.AskgateSessionID, env1.Env)
+	if env1.PilothouseSessionID != "s_abcdefghij" || env1.Env["TMUX"] == "" || env1.Env["SECRET_TOKEN"] != "" || env1.Env["PILOTHOUSE_SESSION_ID"] == "" {
+		t.Errorf("env: session=%q env=%v", env1.PilothouseSessionID, env1.Env)
 	}
 	if env1.Cwd == "" || env1.ReceivedAt.IsZero() {
 		t.Errorf("cwd/time: %+v", env1)
@@ -292,7 +292,7 @@ func TestHooksCommands(t *testing.T) {
 		err := cmd.Run()
 		return out.String(), errb.String(), err
 	}
-	user := os.Getenv("ASKGATE_USER_HOME")
+	user := os.Getenv("PILOTHOUSE_USER_HOME")
 	settings := filepath.Join(user, ".claude", "settings.json")
 	if err := os.MkdirAll(filepath.Dir(settings), 0o700); err != nil {
 		t.Fatal(err)
@@ -313,7 +313,7 @@ func TestHooksCommands(t *testing.T) {
 	}
 
 	out, _, err = run("hooks", "install", "--agent", "claude")
-	if err != nil || !strings.Contains(out, "backup  "+settings+".askgate-bak-") {
+	if err != nil || !strings.Contains(out, "backup  "+settings+".pilothouse-bak-") {
 		t.Fatalf("install: %v\n%s", err, out)
 	}
 	resolved, _ := filepath.EvalSymlinks(bin)
@@ -334,7 +334,7 @@ func TestHooksCommands(t *testing.T) {
 		t.Errorf("reinstall: %v\n%s", err, out)
 	}
 	out, _, err = run("hooks", "uninstall")
-	if err != nil || !strings.Contains(out, "Remove 10 Askgate hook handlers") {
+	if err != nil || !strings.Contains(out, "Remove 10 Pilothouse hook handlers") {
 		t.Errorf("uninstall: %v\n%s", err, out)
 	}
 	if b, _ := os.ReadFile(settings); strings.TrimSpace(string(b)) != "{\n  \"model\": \"opus\"\n}" {

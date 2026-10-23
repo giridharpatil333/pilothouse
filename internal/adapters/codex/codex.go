@@ -5,7 +5,7 @@
 // SessionEnd, UserPromptSubmit, PreToolUse, PermissionRequest,
 // PostToolUse, Stop, SubagentStart/Stop, Pre/PostCompact, Interrupt and
 // model-request events. The feature flag `hooks` is stable and on by
-// default (codex-rs/features/src/lib.rs). What Askgate gets from it:
+// default (codex-rs/features/src/lib.rs). What Pilothouse gets from it:
 //
 //   - PreToolUse can block (permissionDecision "deny" with a reason).
 //     "allow" without updatedInput and "ask" are rejected by Codex as
@@ -24,10 +24,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/hookkit"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/hookkit"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 // PermissionTimeout is the PermissionRequest hook timeout we install
@@ -56,10 +56,10 @@ func (Adapter) ProcessNames() []string { return []string{"codex"} }
 // Home is Codex's home directory, resolved the way Codex does
 // (codex-rs/utils/home-dir): $CODEX_HOME canonicalized, else ~/.codex.
 // Trust keys embed this path, so it must match Codex exactly.
-// $ASKGATE_USER_HOME wins over $CODEX_HOME so tests never reach a real
+// $PILOTHOUSE_USER_HOME wins over $CODEX_HOME so tests never reach a real
 // Codex home through an inherited variable.
 func Home() string {
-	if os.Getenv("ASKGATE_USER_HOME") == "" {
+	if os.Getenv("PILOTHOUSE_USER_HOME") == "" {
 		if h := os.Getenv("CODEX_HOME"); h != "" {
 			if real, err := filepath.EvalSymlinks(h); err == nil {
 				return real
@@ -70,7 +70,7 @@ func Home() string {
 	return filepath.Join(paths.UserHome(), ".codex")
 }
 
-// HooksPath is the hooks file Askgate manages.
+// HooksPath is the hooks file Pilothouse manages.
 func HooksPath() string { return filepath.Join(Home(), "hooks.json") }
 
 // ConfigPath is Codex's user config, where hook trust lives.

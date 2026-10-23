@@ -22,7 +22,7 @@ func TestSchemaErrors(t *testing.T) {
 		{"wrong version", "version: 2\nrules: []\n", 1, `unsupported version "2"`},
 		{"rules not list", "version: 1\nrules: {a: b}\n", 2, "`rules:` must be a list"},
 		{"duplicate name", "version: 1\nrules:\n  - {name: x, match: {tool: A}, action: deny}\n  - {name: x, match: {tool: B}, action: deny}\n", 4, `duplicate rule name "x" (first defined on line 3)`},
-		{"reserved name", "version: 1\nrules:\n  - {name: askgate-mine, match: {tool: A}, action: deny}\n", 3, "reserved for built-in rules"},
+		{"reserved name", "version: 1\nrules:\n  - {name: pilothouse-mine, match: {tool: A}, action: deny}\n", 3, "reserved for built-in rules"},
 		{"missing name", "version: 1\nrules:\n  - {match: {tool: A}, action: deny}\n", 3, "rule 1: missing `name:`"},
 		{"missing action", "version: 1\nrules:\n  - {name: x, match: {tool: A}}\n", 3, `rule "x": missing ` + "`action:`"},
 		{"no match or when", "version: 1\nrules:\n  - {name: x, action: deny}\n", 3, "needs `match:` and/or `when:`"},

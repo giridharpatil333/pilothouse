@@ -1,5 +1,5 @@
 // Package task runs prompts as tasks: each gets its own git worktree and
-// branch (askgate/<slug>) and a wrapped agent session, so several agents
+// branch (pilothouse/<slug>) and a wrapped agent session, so several agents
 // can work on one repository without touching the user's checkout
 // (BUILD-SPEC §10). Every git operation goes through the git binary and
 // only ever changes the task's own worktree and branch.
@@ -17,14 +17,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/paths"
-	"github.com/xasdta/askgate/internal/wrap"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/paths"
+	"github.com/xasdta/pilothouse/internal/wrap"
 )
 
 // BranchPrefix namespaces task branches.
-const BranchPrefix = "askgate/"
+const BranchPrefix = "pilothouse/"
 
 // StartSpec is what a Starter needs to launch a task's agent.
 type StartSpec struct {
@@ -41,14 +41,14 @@ type StartSpec struct {
 type Starter func(ctx context.Context, s StartSpec) (sessionID string, err error)
 
 // SpawnStarter starts the agent under a wrapped-session holder, like
-// `askgate run -d --task <id>`.
+// `pilothouse run -d --task <id>`.
 func SpawnStarter(ctx context.Context, s StartSpec) (string, error) {
 	return wrap.Spawn(ctx, wrap.SpawnOptions{
 		Name: s.Name, TaskID: s.TaskID, Argv: s.Argv, Dir: s.Dir, Cols: s.Cols, Rows: s.Rows,
 	})
 }
 
-// Manager implements the `askgate task` commands.
+// Manager implements the `pilothouse task` commands.
 type Manager struct {
 	Daemon *client.Client // default client.New(); used only when reachable
 	Start  Starter        // default SpawnStarter
@@ -100,7 +100,7 @@ type NewOptions struct {
 // agent. On failure everything it created is removed again.
 func (m *Manager) New(ctx context.Context, o NewOptions) (t api.Task, err error) {
 	if strings.TrimSpace(o.Prompt) == "" {
-		return t, errors.New(`task needs a prompt: askgate task new "<what the agent should do>"`)
+		return t, errors.New(`task needs a prompt: pilothouse task new "<what the agent should do>"`)
 	}
 	if o.Agent == "" {
 		o.Agent = "claude"
@@ -116,7 +116,7 @@ func (m *Manager) New(ctx context.Context, o NewOptions) (t api.Task, err error)
 	}
 	top, err := gitOutput(ctx, o.Dir, "rev-parse", "--show-toplevel")
 	if err != nil {
-		return t, fmt.Errorf("%s is not inside a git repository — run `askgate task new` from your repo", o.Dir)
+		return t, fmt.Errorf("%s is not inside a git repository — run `pilothouse task new` from your repo", o.Dir)
 	}
 	repo := mainRepoRoot(ctx, top)
 
@@ -279,7 +279,7 @@ func (m *Manager) Get(ref string) (api.Task, error) {
 	case 1:
 		return matches[0], nil
 	case 0:
-		return api.Task{}, fmt.Errorf("no task matches %q — list tasks with `askgate task ls --all`", ref)
+		return api.Task{}, fmt.Errorf("no task matches %q — list tasks with `pilothouse task ls --all`", ref)
 	}
 	var ids []string
 	for _, t := range matches {
@@ -465,14 +465,14 @@ func (m *Manager) openPR(ctx context.Context, t api.Task) error {
 	cmd.Dir = t.Repo
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, m.out(), m.errw()
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("gh pr create failed (%v) — the branch is pushed; open the PR on GitHub, then run `askgate task done %s`", err, t.ID)
+		return fmt.Errorf("gh pr create failed (%v) — the branch is pushed; open the PR on GitHub, then run `pilothouse task done %s`", err, t.ID)
 	}
 	return nil
 }
 
 // AbandonOptions configures `task abandon`.
 type AbandonOptions struct {
-	KeepBranch bool // keep askgate/<slug>
+	KeepBranch bool // keep pilothouse/<slug>
 	Force      bool // even while the agent is running
 }
 
@@ -521,7 +521,7 @@ func (m *Manager) openTask(ctx context.Context, ref string, force bool) (api.Tas
 		return t, fmt.Errorf("task %s (%s) is already %s", t.ID, t.Title, t.Status)
 	}
 	if t.SessionID != "" && !force && wrap.Alive(ctx, t.SessionID) {
-		return t, fmt.Errorf("the agent for task %s is still running — exit it first (askgate attach %s), or pass --force", t.Title, t.SessionID)
+		return t, fmt.Errorf("the agent for task %s is still running — exit it first (pilothouse attach %s), or pass --force", t.Title, t.SessionID)
 	}
 	return t, nil
 }

@@ -13,23 +13,23 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/all"
-	"github.com/xasdta/askgate/internal/adapters/hookkit"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/config"
-	"github.com/xasdta/askgate/internal/proc"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/all"
+	"github.com/xasdta/pilothouse/internal/adapters/hookkit"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/config"
+	"github.com/xasdta/pilothouse/internal/proc"
 )
 
-// ---------------------------------------------------------------- askgate hooks
+// ---------------------------------------------------------------- pilothouse hooks
 
 func newHooksCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "hooks",
-		Short: "Install, remove or check Askgate's hooks in Claude Code and Codex",
-		Long: `Askgate sees agents through their hooks. ` + "`hooks install`" + ` merges a call to
-` + "`askgate hook <agent>`" + ` into each agent's settings (~/.claude/settings.json,
+		Short: "Install, remove or check Pilothouse's hooks in Claude Code and Codex",
+		Long: `Pilothouse sees agents through their hooks. ` + "`hooks install`" + ` merges a call to
+` + "`pilothouse hook <agent>`" + ` into each agent's settings (~/.claude/settings.json,
 ~/.codex/hooks.json), keeping every other setting and hook, and backs the file
 up first. ` + "`hooks uninstall`" + ` removes exactly what install added.`,
 		Args: cobra.NoArgs,
@@ -41,9 +41,9 @@ up first. ` + "`hooks uninstall`" + ` removes exactly what install added.`,
 func newHooksChangeCmd(install bool) *cobra.Command {
 	var agent string
 	var dryRun bool
-	use, short := "uninstall", "Remove Askgate's hooks (and nothing else)"
+	use, short := "uninstall", "Remove Pilothouse's hooks (and nothing else)"
 	if install {
-		use, short = "install", "Wire Askgate's hooks into Claude Code and Codex"
+		use, short = "install", "Wire Pilothouse's hooks into Claude Code and Codex"
 	}
 	cmd := &cobra.Command{
 		Use:   use,
@@ -135,7 +135,7 @@ func newHooksStatusCmd() *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "Show whether Askgate's hooks are installed and current",
+		Short: "Show whether Pilothouse's hooks are installed and current",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			targets, err := hookTargets(agent, false)
@@ -190,7 +190,7 @@ func runHooksStatus(w io.Writer, targets []adapters.Adapter, opts adapters.Insta
 			fmt.Fprintf(w, "  ! %s\n", p)
 		}
 		if !st.Installed && len(st.Problems) == 0 {
-			fmt.Fprintf(w, "  run `askgate hooks install --agent %s`\n", r.Agent)
+			fmt.Fprintf(w, "  run `pilothouse hooks install --agent %s`\n", r.Agent)
 		}
 	}
 	return nil
@@ -223,7 +223,7 @@ func hookTargets(agent string, install bool) ([]adapters.Adapter, error) {
 }
 
 // shimPath is the binary hooks will call: this one, absolute and with
-// symlinks resolved (shared with `askgate setup`, so both write the same
+// symlinks resolved (shared with `pilothouse setup`, so both write the same
 // command). A path that will vanish is allowed but warned about.
 func shimPath(warn io.Writer) (string, error) {
 	exe, err := resolvedExe()
@@ -236,7 +236,7 @@ func shimPath(warn io.Writer) (string, error) {
 	return exe, nil
 }
 
-// ---------------------------------------------------------------- askgate hook <agent>
+// ---------------------------------------------------------------- pilothouse hook <agent>
 
 const (
 	maxHookPayload = 4 << 20         // stdin cap (BUILD-SPEC §6.1)
@@ -246,9 +246,9 @@ const (
 )
 
 // shimEnv is the environment allow-list forwarded to the daemon.
-var shimEnv = []string{"TERM_PROGRAM", "TMUX", "ASKGATE_SESSION_ID", "ASKGATE_TASK_ID", "SSH_CONNECTION"}
+var shimEnv = []string{"TERM_PROGRAM", "TMUX", "PILOTHOUSE_SESSION_ID", "PILOTHOUSE_TASK_ID", "SSH_CONNECTION"}
 
-// newHookShimCmd is what agents run on every hook: `askgate hook <agent>
+// newHookShimCmd is what agents run on every hook: `pilothouse hook <agent>
 // [event]`. It must never hang, never print anything but the agent's
 // protocol, and fail open (BUILD-SPEC §6.1, invariant 2).
 func newHookShimCmd() *cobra.Command {
@@ -323,7 +323,7 @@ func hookEnvelope(agent api.AgentKind, rest []string, payload []byte) adapters.H
 		Agent:            agent,
 		Payload:          payload,
 		ShimPID:          os.Getpid(),
-		AskgateSessionID: os.Getenv("ASKGATE_SESSION_ID"),
+		PilothouseSessionID: os.Getenv("PILOTHOUSE_SESSION_ID"),
 		ReceivedAt:       time.Now().UTC(),
 	}
 	if len(rest) > 0 {

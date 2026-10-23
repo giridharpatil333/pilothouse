@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/xasdta/askgate/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters"
 )
 
 // MaxMessage caps HookEvent.Message: prompts can be whole pasted files,
 // and the event log needs the gist, not the payload.
 const MaxMessage = 4096
 
-// Payload is the union of the hook stdin fields Askgate reads. Claude Code
+// Payload is the union of the hook stdin fields Pilothouse reads. Claude Code
 // and Codex share these names (Codex adopted Claude's hook schema).
 type Payload struct {
 	SessionID            string          `json:"session_id"`

@@ -14,12 +14,12 @@ func ShimCommand(shimPath, agent string) string {
 	return ShellQuote(shimPath) + " hook " + agent
 }
 
-// OwnedBy returns a matcher for hook commands Askgate installed for agent:
-// any command whose program is named askgate* followed by `hook <agent>`.
+// OwnedBy returns a matcher for hook commands Pilothouse installed for agent:
+// any command whose program is named pilothouse* followed by `hook <agent>`.
 // Matching the name rather than the exact path lets a reinstall from a new
 // location replace a stale entry instead of adding a second one.
 func OwnedBy(agent string) Owned {
-	re := regexp.MustCompile(`(^|[/\s'"])askgate[^/\s'"]*['"]?\s+hook\s+` + regexp.QuoteMeta(agent) + `(\s|$)`)
+	re := regexp.MustCompile(`(^|[/\s'"])pilothouse[^/\s'"]*['"]?\s+hook\s+` + regexp.QuoteMeta(agent) + `(\s|$)`)
 	return func(cmd string) bool { return re.MatchString(cmd) }
 }
 

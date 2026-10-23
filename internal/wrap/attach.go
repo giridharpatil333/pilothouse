@@ -114,7 +114,7 @@ func Attach(ctx context.Context, o AttachOptions) (AttachResult, error) {
 		}
 	}()
 	// The stdin reader cannot be interrupted portably (a read on a TTY
-	// has no deadline); it ends with the process, which `askgate attach`
+	// has no deadline); it ends with the process, which `pilothouse attach`
 	// does right after Attach returns.
 	input := make(chan inChunk, 16)
 	go func() {
@@ -299,7 +299,7 @@ func DetachMessage(r AttachResult) string {
 	if r.Reason != "" && r.Reason != "detach key" && !isSignalReason(r.Reason) {
 		what = "detached (" + r.Reason + ") from"
 	}
-	return fmt.Sprintf("%s %s (%s) — reattach: askgate attach %s", what, r.Name, r.SessionID, r.SessionID)
+	return fmt.Sprintf("%s %s (%s) — reattach: pilothouse attach %s", what, r.Name, r.SessionID, r.SessionID)
 }
 
 func isSignalReason(s string) bool { return len(s) > 7 && s[:7] == "signal " }

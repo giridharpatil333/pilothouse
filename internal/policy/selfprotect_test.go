@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 func TestSelfProtectionShell(t *testing.T) {
@@ -15,143 +15,143 @@ func TestSelfProtectionShell(t *testing.T) {
 	// An allow-everything user rule must not silence the built-in ask.
 	writeFile(t, te.userFile(), "version: 1\nrules:\n  - {name: yolo, match: {tool: \"*\"}, action: allow}\n")
 	e, _ := te.load(t)
-	sock := filepath.Join(te.run, "askgate.sock")
+	sock := filepath.Join(te.run, "pilothouse.sock")
 
 	tests := []struct {
 		cmd  string
 		want bool
 	}{
 		// --- admin subcommands, however they are spelled -------------------
-		{"askgate approve r_123", true},
-		{"./askgate approve r_1", true},
-		{"/usr/local/bin/askgate deny r_1", true},
-		{"ASKGATE approve r_1", true}, // case-insensitive filesystems
-		{`"askgate" approve r_1`, true},
-		{`ask''gate approve r_1`, true},
-		{`a\skgate approve r_1`, true},
-		{`$'\x61skgate' approve r_1`, true},
-		{"askgate --verbose remote off", true},
-		{"askgate pair", true},
-		{"askgate devices revoke d_1", true},
-		{"askgate service install", true},
-		{"askgate hooks uninstall", true},
-		{"askgate here", true},
-		{"askgate away", true},
-		{"askgate auto", true},
-		{"askgate stop", true},
-		{"askgate open", true},
-		{"askgate setup", true},
-		{"askgate policy init --force", true},
-		{"askgate policy trust .", true},
-		{"askgate policy untrust", true},
-		{"askgate policy", true},
+		{"pilothouse approve r_123", true},
+		{"./pilothouse approve r_1", true},
+		{"/usr/local/bin/pilothouse deny r_1", true},
+		{"PILOTHOUSE approve r_1", true}, // case-insensitive filesystems
+		{`"pilothouse" approve r_1`, true},
+		{`pilot''house approve r_1`, true},
+		{`p\ilothouse approve r_1`, true},
+		{`$'\x70ilothouse' approve r_1`, true},
+		{"pilothouse --verbose remote off", true},
+		{"pilothouse pair", true},
+		{"pilothouse devices revoke d_1", true},
+		{"pilothouse service install", true},
+		{"pilothouse hooks uninstall", true},
+		{"pilothouse here", true},
+		{"pilothouse away", true},
+		{"pilothouse auto", true},
+		{"pilothouse stop", true},
+		{"pilothouse open", true},
+		{"pilothouse setup", true},
+		{"pilothouse policy init --force", true},
+		{"pilothouse policy trust .", true},
+		{"pilothouse policy untrust", true},
+		{"pilothouse policy", true},
 		// --- wrappers and chains --------------------------------------------
-		{"env X=1 askgate approve r_1", true},
-		{"env -i PATH=/bin askgate here", true},
-		{"env -u FOO askgate away", true},
-		{`env -S "askgate approve r_1"`, true},
-		{"X=1 Y=2 askgate pair", true},
-		{"sudo -u me askgate service install", true},
-		{"nohup askgate stop &", true},
-		{"timeout 5 askgate hooks uninstall", true},
-		{"nice -n 10 askgate approve r_1", true},
-		{"time askgate approve r_1", true},
-		{"command askgate approve r_1", true},
-		{"ls; askgate approve r_1", true},
-		{"true && askgate away", true},
-		{"false || askgate away", true},
-		{"echo y | askgate approve r_1", true},
-		{"(askgate approve r_1)", true},
-		{"{ askgate approve r_1; }", true},
-		{"if true; then askgate approve r_1; fi", true},
-		{"for i in 1; do askgate approve r_$i; done", true},
-		{"cd /tmp &&\naskgate approve r_1", true},
-		{"ls \\\n && askgate approve r_1", true},
+		{"env X=1 pilothouse approve r_1", true},
+		{"env -i PATH=/bin pilothouse here", true},
+		{"env -u FOO pilothouse away", true},
+		{`env -S "pilothouse approve r_1"`, true},
+		{"X=1 Y=2 pilothouse pair", true},
+		{"sudo -u me pilothouse service install", true},
+		{"nohup pilothouse stop &", true},
+		{"timeout 5 pilothouse hooks uninstall", true},
+		{"nice -n 10 pilothouse approve r_1", true},
+		{"time pilothouse approve r_1", true},
+		{"command pilothouse approve r_1", true},
+		{"ls; pilothouse approve r_1", true},
+		{"true && pilothouse away", true},
+		{"false || pilothouse away", true},
+		{"echo y | pilothouse approve r_1", true},
+		{"(pilothouse approve r_1)", true},
+		{"{ pilothouse approve r_1; }", true},
+		{"if true; then pilothouse approve r_1; fi", true},
+		{"for i in 1; do pilothouse approve r_$i; done", true},
+		{"cd /tmp &&\npilothouse approve r_1", true},
+		{"ls \\\n && pilothouse approve r_1", true},
 		// --- nested shells and substitutions ---------------------------------
-		{`sh -c "askgate approve r_1"`, true},
-		{`bash -lc 'askgate policy trust .'`, true},
-		{`zsh -c 'cd x; askgate deny r_1'`, true},
-		{`bash -c "bash -c 'askgate approve r_1'"`, true},
-		{`echo $(askgate approve r_1)`, true},
-		{"echo `askgate approve r_1`", true},
-		{`echo "$(askgate approve r_1)"`, true},
-		{`cat <(askgate approve r_1)`, true},
-		{`eval "askgate approve r_1"`, true},
-		{`bash <<< "askgate approve r_1"`, true},
-		{`echo "askgate approve r_1" | sh`, true},
-		{`printf 'askgate approve r_1' | bash -s`, true},
-		{`python3 -c "import os; os.system('askgate approve r_1')"`, true},
-		{`osascript -e 'do shell script "askgate approve r_1"'`, true},
-		{`echo r_1 | xargs askgate approve`, true},
-		{`echo approve r_1 | xargs askgate`, true},
-		{`find . -name x -exec askgate approve {} \;`, true},
-		{"askgate run -- askgate approve r_1", true},
-		{"askgate run -n x -- sh -c 'askgate deny r_1'", true},
-		{`AG=askgate; $AG approve r_1`, true},
-		{`busybox sh -c "askgate approve r_1"`, true},
+		{`sh -c "pilothouse approve r_1"`, true},
+		{`bash -lc 'pilothouse policy trust .'`, true},
+		{`zsh -c 'cd x; pilothouse deny r_1'`, true},
+		{`bash -c "bash -c 'pilothouse approve r_1'"`, true},
+		{`echo $(pilothouse approve r_1)`, true},
+		{"echo `pilothouse approve r_1`", true},
+		{`echo "$(pilothouse approve r_1)"`, true},
+		{`cat <(pilothouse approve r_1)`, true},
+		{`eval "pilothouse approve r_1"`, true},
+		{`bash <<< "pilothouse approve r_1"`, true},
+		{`echo "pilothouse approve r_1" | sh`, true},
+		{`printf 'pilothouse approve r_1' | bash -s`, true},
+		{`python3 -c "import os; os.system('pilothouse approve r_1')"`, true},
+		{`osascript -e 'do shell script "pilothouse approve r_1"'`, true},
+		{`echo r_1 | xargs pilothouse approve`, true},
+		{`echo approve r_1 | xargs pilothouse`, true},
+		{`find . -name x -exec pilothouse approve {} \;`, true},
+		{"pilothouse run -- pilothouse approve r_1", true},
+		{"pilothouse run -n x -- sh -c 'pilothouse deny r_1'", true},
+		{`AG=pilothouse; $AG approve r_1`, true},
+		{`busybox sh -c "pilothouse approve r_1"`, true},
 		// --- writes to protected paths ----------------------------------------
-		{"echo x > ~/.askgate/policy.yaml", true},
-		{"echo x >> $HOME/.askgate/config.yaml", true},
-		{"echo x >| ${HOME}/.askgate/config.yaml", true},
-		{"cat x 2> ~/.askgate/x", true},
-		{"echo x &> ~/.askgate/x", true},
-		{"echo x>~/.askgate/x", true},
-		{`sed -i '' s/a/b/ ~/.askgate/policy.yaml`, true},
-		{`sed -i.bak s/a/b/ ~/.askgate/policy.yaml`, true},
-		{`sed -ni s/a/b/p ~/.askgate/policy.yaml`, true},
-		{"echo x >& ~/.askgate/x", true},
+		{"echo x > ~/.pilothouse/policy.yaml", true},
+		{"echo x >> $HOME/.pilothouse/config.yaml", true},
+		{"echo x >| ${HOME}/.pilothouse/config.yaml", true},
+		{"cat x 2> ~/.pilothouse/x", true},
+		{"echo x &> ~/.pilothouse/x", true},
+		{"echo x>~/.pilothouse/x", true},
+		{`sed -i '' s/a/b/ ~/.pilothouse/policy.yaml`, true},
+		{`sed -i.bak s/a/b/ ~/.pilothouse/policy.yaml`, true},
+		{`sed -ni s/a/b/p ~/.pilothouse/policy.yaml`, true},
+		{"echo x >& ~/.pilothouse/x", true},
 		{"tee ~/.claude/settings.json < x", true},
 		{"tee -a ~/.codex/config.toml", true},
-		{"cp /tmp/x ~/.askgate/trusted-repos.yaml", true},
+		{"cp /tmp/x ~/.pilothouse/trusted-repos.yaml", true},
 		{"mv x .claude/settings.local.json", true}, // relative to the repo (cwd)
-		{"rm .askgate/policy.yaml", true},          // the repo's own policy
-		{"cd ~/.askgate && rm policy.yaml", true},
-		{"cd && rm -rf .askgate", true},
-		{`rm -rf "$ASKGATE_HOME"`, true},
-		{`sqlite3 ~/.askgate/askgate.db "update requests set status='decided'"`, true},
+		{"rm .pilothouse/policy.yaml", true},          // the repo's own policy
+		{"cd ~/.pilothouse && rm policy.yaml", true},
+		{"cd && rm -rf .pilothouse", true},
+		{`rm -rf "$PILOTHOUSE_HOME"`, true},
+		{`sqlite3 ~/.pilothouse/pilothouse.db "update requests set status='decided'"`, true},
 		{"curl --unix-socket " + sock + " -X POST http://x/v1/requests/r_1/decide", true},
-		{"sort -o ~/.askgate/policy.yaml x", true},
-		{"find ~/.askgate -name '*.yaml' -delete", true},
-		{"dd if=/dev/zero of=" + te.agHome + "/askgate.db", true},
-		{"ln -sf /tmp/evil ~/.askgate/policy.yaml", true},
-		{"chmod 777 ~/.askgate", true},
+		{"sort -o ~/.pilothouse/policy.yaml x", true},
+		{"find ~/.pilothouse -name '*.yaml' -delete", true},
+		{"dd if=/dev/zero of=" + te.agHome + "/pilothouse.db", true},
+		{"ln -sf /tmp/evil ~/.pilothouse/policy.yaml", true},
+		{"chmod 777 ~/.pilothouse", true},
 		{`python3 -c "open('` + te.agHome + `/policy.yaml','w').write('')"`, true},
-		{`node -e "require('fs').writeFileSync(process.env.HOME+'/.askgate/policy.yaml','')"`, false}, // computed path: documented limit
-		{"vim ~/.askgate/policy.yaml", true},
-		{"yq -i '.rules = []' ~/.askgate/policy.yaml", true},
+		{`node -e "require('fs').writeFileSync(process.env.HOME+'/.pilothouse/policy.yaml','')"`, false}, // computed path: documented limit
+		{"vim ~/.pilothouse/policy.yaml", true},
+		{"yq -i '.rules = []' ~/.pilothouse/policy.yaml", true},
 
 		// --- must NOT trigger --------------------------------------------------
-		// Text that merely mentions askgate is not an invocation (decision
+		// Text that merely mentions pilothouse is not an invocation (decision
 		// documented in POLICY.md); it is only scanned when fed to an interpreter.
-		{"echo askgate approve r_1", false},
-		{`echo "askgate approve r_1" > notes.txt`, false},
-		{`git commit -m "askgate approve: fix race"`, false},
-		{`grep -rn "askgate approve" docs/`, false},
-		{"askgate ls", false},
-		{"askgate log --grep approve", false},
-		{"askgate status", false},
-		{"askgate explain s_1", false},
-		{"askgate", false},
-		{"askgate version", false},
-		{"askgate policy test --command 'askgate approve r_1'", false},
-		{"askgate policy check", false},
-		{"askgate policy status", false},
-		{"askgate run -- claude", false},
-		{"askgate-dev approve r_1", false},
-		{"myaskgate approve r_1", false},
-		{"cat ~/.askgate/policy.yaml", false},
-		{"ls -la ~/.askgate", false},
-		{"grep approve ~/.askgate/logs/daemon.log", false},
-		{"sed s/a/b/ ~/.askgate/policy.yaml", false},
-		{"find ~/.askgate -name '*.yaml'", false},
+		{"echo pilothouse approve r_1", false},
+		{`echo "pilothouse approve r_1" > notes.txt`, false},
+		{`git commit -m "pilothouse approve: fix race"`, false},
+		{`grep -rn "pilothouse approve" docs/`, false},
+		{"pilothouse ls", false},
+		{"pilothouse log --grep approve", false},
+		{"pilothouse status", false},
+		{"pilothouse explain s_1", false},
+		{"pilothouse", false},
+		{"pilothouse version", false},
+		{"pilothouse policy test --command 'pilothouse approve r_1'", false},
+		{"pilothouse policy check", false},
+		{"pilothouse policy status", false},
+		{"pilothouse run -- claude", false},
+		{"pilothouse-dev approve r_1", false},
+		{"mypilothouse approve r_1", false},
+		{"cat ~/.pilothouse/policy.yaml", false},
+		{"ls -la ~/.pilothouse", false},
+		{"grep approve ~/.pilothouse/logs/daemon.log", false},
+		{"sed s/a/b/ ~/.pilothouse/policy.yaml", false},
+		{"find ~/.pilothouse -name '*.yaml'", false},
 		{"go test ./...", false},
 		{"rm -rf node_modules", false},
 		{"echo hi > /tmp/out.txt", false},
-		{"cp ~/.askgatex/a /tmp/b", false}, // prefix of a protected path is not inside it
+		{"cp ~/.pilothousex/a /tmp/b", false}, // prefix of a protected path is not inside it
 		{"echo 2>&1", false},
-		{"cat ~/.askgate/policy.yaml 2>&1 | head", false},
-		{"sed -n 1,5p ~/.askgate/policy.yaml", false},
-		{"sort -u ~/.askgate/x", false},
+		{"cat ~/.pilothouse/policy.yaml 2>&1 | head", false},
+		{"sed -n 1,5p ~/.pilothouse/policy.yaml", false},
+		{"sort -u ~/.pilothouse/x", false},
 		{"bash scripts/build.sh", false},
 		{"python3 -c 'print(1)'", false},
 		{"", false},
@@ -165,7 +165,7 @@ func TestSelfProtectionShell(t *testing.T) {
 			t.Errorf("%q: self-protection=%v, want %v (%s)", tt.cmd, got, tt.want, r.Message)
 			continue
 		}
-		if got && (r.Action != api.BehaviorAsk || r.File != BuiltinFile || !strings.HasPrefix(r.Message, "Askgate self-protection: this ")) {
+		if got && (r.Action != api.BehaviorAsk || r.File != BuiltinFile || !strings.HasPrefix(r.Message, "Pilothouse self-protection: this ")) {
 			t.Errorf("%q: result %+v", tt.cmd, r)
 		}
 		if !got && r.Action != api.BehaviorAllow && tt.cmd != "" {
@@ -176,10 +176,10 @@ func TestSelfProtectionShell(t *testing.T) {
 
 func TestSelfProtectionDenyStillWins(t *testing.T) {
 	te := newTestEnv(t)
-	writeFile(t, te.userFile(), "version: 1\nrules:\n  - {name: no-askgate, match: {command: \"*askgate*\"}, action: deny}\n")
+	writeFile(t, te.userFile(), "version: 1\nrules:\n  - {name: no-pilothouse, match: {command: \"*pilothouse*\"}, action: deny}\n")
 	e, _ := te.load(t)
-	r := e.Evaluate(shell("askgate approve r_1"))
-	if r.Action != api.BehaviorDeny || r.Rule != "no-askgate" || len(r.Matched) != 2 {
+	r := e.Evaluate(shell("pilothouse approve r_1"))
+	if r.Action != api.BehaviorDeny || r.Rule != "no-pilothouse" || len(r.Matched) != 2 {
 		t.Fatalf("%+v", r)
 	}
 }
@@ -198,23 +198,23 @@ func TestSelfProtectionEditTools(t *testing.T) {
 		cwd   string
 		want  bool
 	}{
-		{"policy file", api.ToolEdit, []string{"~/.askgate/policy.yaml"}, "", true},
+		{"policy file", api.ToolEdit, []string{"~/.pilothouse/policy.yaml"}, "", true},
 		{"absolute", api.ToolEdit, []string{te.agHome + "/config.yaml"}, "", true},
 		{"agent settings", api.ToolEdit, []string{te.home + "/.claude/settings.json"}, "", true},
 		{"codex config", api.ToolEdit, []string{"~/.codex/config.toml"}, "", true},
-		{"repo policy relative", api.ToolEdit, []string{".askgate/policy.yaml"}, te.repo, true},
+		{"repo policy relative", api.ToolEdit, []string{".pilothouse/policy.yaml"}, te.repo, true},
 		{"project claude settings", api.ToolEdit, []string{".claude/settings.local.json"}, te.repo, true},
-		{"dot-dot escape", api.ToolEdit, []string{"../../.askgate/policy.yaml"}, te.repo, true},
+		{"dot-dot escape", api.ToolEdit, []string{"../../.pilothouse/policy.yaml"}, te.repo, true},
 		{"via symlink", api.ToolEdit, []string{link + "/policy.yaml"}, "", true},
 		{"new file via symlinked dir", api.ToolEdit, []string{link + "/new.yaml"}, "", true},
-		{"one of many", api.ToolEdit, []string{"/tmp/a", "~/.askgate/x"}, "", true},
-		{"mcp writer", api.ToolMCP, []string{"~/.askgate/x"}, "", true},
-		{"other tool", api.ToolOther, []string{"~/.askgate/x"}, "", true},
-		{"read is fine", api.ToolRead, []string{"~/.askgate/policy.yaml"}, "", false},
-		{"web is fine", api.ToolWeb, []string{"~/.askgate/policy.yaml"}, "", false},
+		{"one of many", api.ToolEdit, []string{"/tmp/a", "~/.pilothouse/x"}, "", true},
+		{"mcp writer", api.ToolMCP, []string{"~/.pilothouse/x"}, "", true},
+		{"other tool", api.ToolOther, []string{"~/.pilothouse/x"}, "", true},
+		{"read is fine", api.ToolRead, []string{"~/.pilothouse/policy.yaml"}, "", false},
+		{"web is fine", api.ToolWeb, []string{"~/.pilothouse/policy.yaml"}, "", false},
 		{"source file", api.ToolEdit, []string{"src/main.go"}, te.repo, false},
 		{"claude dir other file", api.ToolEdit, []string{".claude/commands/x.md"}, te.repo, false},
-		{"lookalike", api.ToolEdit, []string{"~/.askgate-notes.md"}, "", false},
+		{"lookalike", api.ToolEdit, []string{"~/.pilothouse-notes.md"}, "", false},
 	}
 	for _, tt := range tests {
 		r := e.Evaluate(Input{Agent: api.AgentClaude, Tool: "Edit", ToolKind: tt.kind, Paths: tt.paths, Cwd: tt.cwd, Repo: tt.cwd})
@@ -223,9 +223,9 @@ func TestSelfProtectionEditTools(t *testing.T) {
 		}
 	}
 	if runtime.GOOS == "darwin" {
-		r := e.Evaluate(Input{ToolKind: api.ToolEdit, Paths: []string{"~/.ASKGATE/policy.yaml"}})
+		r := e.Evaluate(Input{ToolKind: api.ToolEdit, Paths: []string{"~/.PILOTHOUSE/policy.yaml"}})
 		if r.Rule != SelfProtectionRule {
-			t.Error("case-insensitive filesystem: ~/.ASKGATE must be protected")
+			t.Error("case-insensitive filesystem: ~/.PILOTHOUSE must be protected")
 		}
 	}
 }
@@ -258,7 +258,7 @@ func TestParseShell(t *testing.T) {
 }
 
 func FuzzSelfProtection(f *testing.F) {
-	for _, s := range []string{"askgate approve r_1", `sh -c "x"`, "echo $(a `b` <(c))", "a > b", `$'\x41'`} {
+	for _, s := range []string{"pilothouse approve r_1", `sh -c "x"`, "echo $(a `b` <(c))", "a > b", `$'\x41'`} {
 		f.Add(s)
 	}
 	te := newTestEnv(f)

@@ -1,6 +1,6 @@
-# Askgate v0.1 — binding build spec
+# Pilothouse v0.1 — binding build spec
 
-Askgate is one inbox for every coding agent. A single Go binary (`askgate`)
+Pilothouse is one inbox for every coding agent. A single Go binary (`pilothouse`)
 runs a per-user daemon that sees every Claude Code and Codex session on the
 machine, applies the user's rules **before every tool call**, and sends what
 needs a person to wherever they are: the terminal at the desk, or a paired
@@ -12,16 +12,16 @@ the v0.1 cut and overrides the plan where they differ.
 ## 1. v0.1 scope
 
 In:
-- Daemon `askgate daemon` (Unix socket API + loopback web listener), SQLite event log.
+- Daemon `pilothouse daemon` (Unix socket API + loopback web listener), SQLite event log.
 - Observe mode: hooks for **Claude Code** (full: policy + remote approvals) and **Codex** (whatever its hooks support — see §6.3).
-- Wrap mode: `askgate run <agent>` PTY holder with detach/attach, OSC 7501 (L1), survives daemon restarts and terminal close.
-- Policy engine: YAML rules with glob `match:` and/or CEL `when:`; user + repo (trust-gated) + built-in rules; `askgate policy test|replay`.
+- Wrap mode: `pilothouse run <agent>` PTY holder with detach/attach, OSC 7501 (L1), survives daemon restarts and terminal close.
+- Policy engine: YAML rules with glob `match:` and/or CEL `when:`; user + repo (trust-gated) + built-in rules; `pilothouse policy test|replay`.
 - Presence-aware routing (OS idle on macOS/Linux, manual override).
 - Approvals: first answer wins; allow once / allow for session / deny with message.
-- Web app (PWA) served by the daemon; pairing by QR/one-time code; per-device P-256 keys sign every remote decision; Web Push (VAPID); works over Tailscale Serve HTTPS (`askgate remote tailscale`).
+- Web app (PWA) served by the daemon; pairing by QR/one-time code; per-device P-256 keys sign every remote decision; Web Push (VAPID); works over Tailscale Serve HTTPS (`pilothouse remote tailscale`).
 - Notifications: desktop, Web Push, ntfy (with signed Allow/Deny action buttons), generic webhooks.
 - Inbox TUI (Bubble Tea), CLI (`ls`, `approve`, `deny`, `log`, `explain`, `here/away/auto`, `setup`, `doctor`, `service`).
-- Tasks: `askgate task new "prompt"` → git worktree + branch + wrapped agent; `task ls|diff|done --pr`.
+- Tasks: `pilothouse task new "prompt"` → git worktree + branch + wrapped agent; `task ls|diff|done --pr`.
 - launchd/systemd user service install.
 - macOS + Linux, amd64 + arm64. No Windows in v0.1.
 
@@ -29,26 +29,26 @@ Out (roadmap, say so honestly in docs): E2E relay, hosted Cloud, team policies/S
 
 ## 2. Invariants (every workstream)
 
-1. **Tests never touch the real home.** Set `ASKGATE_HOME`, `ASKGATE_USER_HOME` and `ASKGATE_RUN_DIR` to temp dirs in every test (`t.Setenv`). `ASKGATE_RUN_DIR` must be short (`os.MkdirTemp("/tmp", "ag")`) — macOS socket paths max ~104 bytes. **Never** write to `~/.claude`, `~/.codex`, `~/.askgate`, `~/Library/LaunchAgents` or systemd dirs of the real user, and never install hooks for real — the developer machine is running Claude Code right now and its hooks would break it.
+1. **Tests never touch the real home.** Set `PILOTHOUSE_HOME`, `PILOTHOUSE_USER_HOME` and `PILOTHOUSE_RUN_DIR` to temp dirs in every test (`t.Setenv`). `PILOTHOUSE_RUN_DIR` must be short (`os.MkdirTemp("/tmp", "ag")`) — macOS socket paths max ~104 bytes. **Never** write to `~/.claude`, `~/.codex`, `~/.pilothouse`, `~/Library/LaunchAgents` or systemd dirs of the real user, and never install hooks for real — the developer machine is running Claude Code right now and its hooks would break it.
 2. **Fail open by default.** If the daemon is down or slow, the hook shim prints the adapter's no-opinion response and exits 0 within 2 s (except blocking permission hooks, which have the daemon's own hold limit). `approvals.fail_closed: true` flips pre_tool to deny.
 3. **Pre_tool is fast.** Policy evaluation p99 < 5 ms; shim round trip p99 < 25 ms. Never block at pre_tool waiting for a person.
 4. **First answer wins.** Closing a request is a compare-and-set (`UPDATE … WHERE status IN ('open','stepped_aside')`); losers get `already_decided` (HTTP 409).
 5. **Agents cannot approve themselves.**
    - Decisions are accepted only on the Unix socket (local) or the web API with a valid device signature. The TCP listener never accepts unsigned decisions.
    - On the Unix socket, `decide`, `pair`, `login-link`, device revoke, presence change and policy reload are rejected with 403 `agent_caller` if any ancestor of the peer process is an agent process (any adapter's `ProcessNames()`).
-   - Built-in policy rule `askgate-self-protection` forces `ask` for shell commands that run askgate admin subcommands and for edits to protected paths (Askgate home, agent settings files).
+   - Built-in policy rule `pilothouse-self-protection` forces `ask` for shell commands that run pilothouse admin subcommands and for edits to protected paths (Pilothouse home, agent settings files).
 6. **Event log is the source of truth for clients.** Every state change is written with its event in one transaction (outbox). Seq is strictly increasing. Clients load `/v1/snapshot`, then stream `/v1/events?follow=1&after=<seq>`; if `after` is too old or the client is slow, the server sends `event: control` `{"resync_required":true}` and closes.
-7. **No telemetry.** Only the anonymous update check (`version, os, arch, monthly-rotating random id`) — off with `update_check: false` or `ASKGATE_NO_UPDATE_CHECK=1`. Nothing about sessions, prompts, commands or paths ever leaves the machine except notification channels the user configured.
+7. **No telemetry.** Only the anonymous update check (`version, os, arch, monthly-rotating random id`) — off with `update_check: false` or `PILOTHOUSE_NO_UPDATE_CHECK=1`. Nothing about sessions, prompts, commands or paths ever leaves the machine except notification channels the user configured.
 8. **Secrets.** Data dir 0700, DB/keys/config 0600. Device tokens and action tokens stored hashed (SHA-256). Constant-time compares.
 9. **Logging:** `log/slog`, text to stderr in foreground, file `logs/daemon.log` (rotate at 10 MB, keep 3) when run as a service. Never log tool inputs at info level beyond the one-line summary.
-10. **Errors are actionable.** CLI errors say what to do next ("daemon not running — run `askgate start`").
+10. **Errors are actionable.** CLI errors say what to do next ("daemon not running — run `pilothouse start`").
 
 ## 3. Layout and ownership
 
 See `docs/WORKSTREAMS.md` for who owns what. Shared files (`internal/api`, `internal/core`, `internal/client`, `internal/paths`, `internal/config`, `internal/adapters/adapter.go`, `internal/cli/root.go`) accept **additive** changes only (new types/fields/methods/routes), and every such change is logged in `docs/SHARED-CHANGES.md` with the reason.
 
 ```
-cmd/askgate/            main → cli.Main
+cmd/pilothouse/            main → cli.Main
 internal/api            wire types (JSON)
 internal/core           Core / Notifier interfaces (daemon boundary)
 internal/client         Unix-socket client (CLI, TUI, shim, holders)
@@ -91,7 +91,7 @@ HTTP/1.1 over the socket. JSON bodies. Errors: `api.Error{error, code}` with cod
 | POST /v1/sessions/{id}/exit | `api.ExitBody` → 204 | |
 | GET /v1/requests?status= | → `[]api.Request` | |
 | GET /v1/requests/{id} | → `api.Request` | id or unique prefix |
-| POST /v1/requests/{id}/decide | `api.DecideBody` → `api.Request` | guarded; By = "cli" or "tui" (header `X-Askgate-Client`) |
+| POST /v1/requests/{id}/decide | `api.DecideBody` → `api.Request` | guarded; By = "cli" or "tui" (header `X-Pilothouse-Client`) |
 | GET/PUT /v1/presence | `api.PresenceBody` → `api.Presence` | PUT guarded |
 | GET /v1/tasks, GET /v1/tasks/{id}, POST /v1/tasks | `api.Task` | POST upserts |
 | GET /v1/policy/status, POST /v1/policy/reload | → `api.PolicyStatus` | reload guarded |
@@ -105,7 +105,7 @@ IDs: sessions `s_` + 10 lowercase base32 chars; requests `r_…`; tasks `t_…`;
 ```
 POST /v1/hook(env):
   ad := all.Get(env.Agent); ev := ad.ParseHook(env)            // parse error → no-opinion response
-  sess := find by env.AskgateSessionID (wrapped) or (agent, ev.AgentSessionID); else create observed session
+  sess := find by env.PilothouseSessionID (wrapped) or (agent, ev.AgentSessionID); else create observed session
           PID = nearest ancestor whose Comm ∈ ad.ProcessNames(); repo root + branch via git (cache 30 s per cwd)
   append EventHook (normalized ev, no raw payload) + state evidence → resolver → session.updated if changed
   switch ev.Kind:
@@ -131,10 +131,10 @@ Grants (`scope: session`): shell tools store `Prefix` = first two words of the c
 ## 6. Adapters
 
 ### 6.1 Shim
-`askgate hook <agent>` reads stdin (≤ 4 MB), builds `HookEnvelope` (ancestors via `proc.Ancestors(os.Getppid() chain)`, env allow-list: `TERM_PROGRAM, TMUX, ASKGATE_SESSION_ID, ASKGATE_TASK_ID, SSH_CONNECTION`), POSTs to the daemon with timeout = `ad.MaxHold(kind)` for permission, 2 s otherwise; prints `Stdout` to stdout, `Stderr` to stderr, exits `ExitCode`. Daemon unreachable → `ad.FailResponse(kind, cfg.fail_closed)`.
+`pilothouse hook <agent>` reads stdin (≤ 4 MB), builds `HookEnvelope` (ancestors via `proc.Ancestors(os.Getppid() chain)`, env allow-list: `TERM_PROGRAM, TMUX, PILOTHOUSE_SESSION_ID, PILOTHOUSE_TASK_ID, SSH_CONNECTION`), POSTs to the daemon with timeout = `ad.MaxHold(kind)` for permission, 2 s otherwise; prints `Stdout` to stdout, `Stderr` to stderr, exits `ExitCode`. Daemon unreachable → `ad.FailResponse(kind, cfg.fail_closed)`.
 
 ### 6.2 Claude Code
-Verify against https://code.claude.com/docs/en/hooks (fetch it). Settings file `~/.claude/settings.json` (via `paths.UserHome()`); merge — never clobber the user's hooks; back up to `settings.json.askgate-bak-<ts>`; identify our entries by the command containing `askgate hook claude`. Wire: SessionStart, SessionEnd, UserPromptSubmit, PreToolUse (timeout 30), PermissionRequest (timeout 600), PostToolUse, Notification, Stop, SubagentStop. `MaxHold(permission)` = 600 s; others 0.
+Verify against https://code.claude.com/docs/en/hooks (fetch it). Settings file `~/.claude/settings.json` (via `paths.UserHome()`); merge — never clobber the user's hooks; back up to `settings.json.pilothouse-bak-<ts>`; identify our entries by the command containing `pilothouse hook claude`. Wire: SessionStart, SessionEnd, UserPromptSubmit, PreToolUse (timeout 30), PermissionRequest (timeout 600), PostToolUse, Notification, Stop, SubagentStop. `MaxHold(permission)` = 600 s; others 0.
 
 ### 6.3 Codex
 Research the current Codex CLI (github.com/openai/codex) for: hooks support and its config format/events/response schema, the `notify` program setting, OSC 7501, session files. Implement the strongest supported integration; document precisely what works (policy? remote approvals? state only?) in `docs/AGENTS.md`. Don't invent APIs — cite source files.
@@ -154,7 +154,7 @@ Unseen = set when entering blocked/waiting/errored/exited; cleared by `seen`.
 ## 8. Policy
 
 ```yaml
-# ~/.askgate/policy.yaml  (also <repo>/.askgate/policy.yaml)
+# ~/.pilothouse/policy.yaml  (also <repo>/.pilothouse/policy.yaml)
 version: 1
 rules:
   - name: no-force-push
@@ -168,34 +168,34 @@ rules:
 - `match` fields: `agent, tool, kind, command, path, cwd, repo, branch` — glob syntax (`*`, `**`, `?`, `{a,b}`); `path` matches if any path matches.
 - CEL vars: `agent, tool, kind, command, paths (list), path (first or ""), input (map), cwd, repo, branch, mode, hour, weekday`; functions `glob(s, pattern)`, `has_word(s, word)` plus CEL standard + strings ext.
 - Precedence: any `deny` wins, then `ask`, then `allow`. Built-in rules can't be disabled.
-- Repo files: `<repo>/.askgate/policy.yaml`. Untrusted repos (not in `trusted-repos.yaml`) may only contribute `deny`/`ask` — their `allow` rules are reported as ignored.
+- Repo files: `<repo>/.pilothouse/policy.yaml`. Untrusted repos (not in `trusted-repos.yaml`) may only contribute `deny`/`ask` — their `allow` rules are reported as ignored.
 - Invalid file → keep last good rules for that file + report error in status; never crash.
 - CLI: `policy init` (starter file with examples), `policy check [file]`, `policy test --tool --command --path --agent --cwd`, `policy replay [--since 7d]` (re-evaluate logged pre_tool hook events, show what changes), `policy trust|untrust [repo]`, `policy status`.
 
-## 9. Wrap mode (`askgate run`)
+## 9. Wrap mode (`pilothouse run`)
 
-- `askgate run [-n name] [-d] [--task id] [--] <cmd> [args…]` picks the agent kind from `basename(cmd)` (`claude`, `codex`, else `generic`).
-- Spawns a holder: re-exec `askgate __holder --id <sid> -- <cmd…>` with `Setsid`, stdio → /dev/null, log `logs/holder-<sid>.log`. The holder owns the PTY (creack/pty), exports `ASKGATE_SESSION_ID=<sid>` and `ASKGATE=1` to the child, listens on `paths.HolderSocket(sid)` (0600), registers with the daemon (retry every 2 s; works with no daemon), parses OSC 7501 from output and reports it, reports exit and exits 5 s after the child.
+- `pilothouse run [-n name] [-d] [--task id] [--] <cmd> [args…]` picks the agent kind from `basename(cmd)` (`claude`, `codex`, else `generic`).
+- Spawns a holder: re-exec `pilothouse __holder --id <sid> -- <cmd…>` with `Setsid`, stdio → /dev/null, log `logs/holder-<sid>.log`. The holder owns the PTY (creack/pty), exports `PILOTHOUSE_SESSION_ID=<sid>` and `PILOTHOUSE=1` to the child, listens on `paths.HolderSocket(sid)` (0600), registers with the daemon (retry every 2 s; works with no daemon), parses OSC 7501 from output and reports it, reports exit and exits 5 s after the child.
 - Attach client: raw mode, forwards stdin/resize, prints output; **detach key `ctrl+\`** (0x1c) — press twice to send a literal ctrl+\ to the agent. On attach, nudge a redraw (resize rows-1 then rows). One active client; a new attach detaches the old one with a message.
 - Frame protocol on the holder socket: `[type u8][len u32 BE][payload]`; types: hello, data, resize(cols u16, rows u16), detach, exit(code i32), error(text).
-- `askgate attach <id-prefix>`; `askgate ls` marks attachable sessions.
+- `pilothouse attach <id-prefix>`; `pilothouse ls` marks attachable sessions.
 - Holders are not children of the daemon or the service manager: restarting the daemon never kills agents.
 
 ## 10. Tasks
 
-`askgate task new [--agent claude] [--base <ref>] [--name slug] [-a|--attach] "<prompt>"`: requires a git repo; creates branch `askgate/<slug>` and worktree `~/.askgate/worktrees/<repo>/<slug>` from base (default: current branch); registers `api.Task`; starts `askgate run -d --task <id>` with the agent and the prompt as its first message (`claude "<prompt>"`, `codex "<prompt>"`). `task ls` (status derived from its session), `task diff <id>` (`git diff base...branch`), `task done <id> [--pr] [--keep]` (`--pr` pushes and runs `gh pr create --fill`), `task abandon <id>`.
+`pilothouse task new [--agent claude] [--base <ref>] [--name slug] [-a|--attach] "<prompt>"`: requires a git repo; creates branch `pilothouse/<slug>` and worktree `~/.pilothouse/worktrees/<repo>/<slug>` from base (default: current branch); registers `api.Task`; starts `pilothouse run -d --task <id>` with the agent and the prompt as its first message (`claude "<prompt>"`, `codex "<prompt>"`). `task ls` (status derived from its session), `task diff <id>` (`git diff base...branch`), `task done <id> [--pr] [--keep]` (`--pr` pushes and runs `gh pr create --fill`), `task abandon <id>`.
 
 ## 11. Web app and device API (TCP `127.0.0.1:7517`)
 
 - Host allow-list (DNS-rebinding defense): `127.0.0.1:<port>`, `localhost:<port>`, and the host of `web.public_url`.
-- Pairing: `askgate pair` → one-time code (10 min) → URL `<base>/pair#<code>` + terminal QR. The page generates a non-extractable ECDSA P-256 key in IndexedDB, POSTs `/api/pair {code, name, public_key}` → device id + HttpOnly cookie `ag_dev` (SameSite=Strict, Secure on https). `askgate open` does the same for this machine's browser via a login link.
-- Auth: cookie on every `/api/*`; state-changing requests also need header `X-Askgate: 1` and a same-origin `Origin`.
-- Decisions: `POST /api/requests/{id}/decide {behavior, scope, message, ts, nonce, sig}`; `sig` = WebCrypto ECDSA-P256-SHA256 (P1363) over `askgate-decide:v1\n{id}\n{behavior}\n{scope}\n{ts}\n{nonce}`; |now−ts| ≤ 120 s; nonce single-use. By = `device:<id>`.
+- Pairing: `pilothouse pair` → one-time code (10 min) → URL `<base>/pair#<code>` + terminal QR. The page generates a non-extractable ECDSA P-256 key in IndexedDB, POSTs `/api/pair {code, name, public_key}` → device id + HttpOnly cookie `ph_dev` (SameSite=Strict, Secure on https). `pilothouse open` does the same for this machine's browser via a login link.
+- Auth: cookie on every `/api/*`; state-changing requests also need header `X-Pilothouse: 1` and a same-origin `Origin`.
+- Decisions: `POST /api/requests/{id}/decide {behavior, scope, message, ts, nonce, sig}`; `sig` = WebCrypto ECDSA-P256-SHA256 (P1363) over `pilothouse-decide:v1\n{id}\n{behavior}\n{scope}\n{ts}\n{nonce}`; |now−ts| ≤ 120 s; nonce single-use. By = `device:<id>`.
 - `GET /api/snapshot`, `GET /api/events?after=` (SSE), session detail/events/seen, presence, push subscribe/unsubscribe, `GET /api/vapid`, device rename/sign-out.
 - ntfy actions: `POST /api/actions/{token}` where token = random 32 bytes stored hashed with (request, behavior, expiry = request expiry); single use.
 - Security headers: strict CSP (`default-src 'self'`), `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, HSTS on https.
 - PWA: mobile-first, installable (manifest + service worker), dark and light, no build step (vanilla JS modules embedded with `go:embed`). Screens: Pair, Inbox (Needs you → big Allow / Allow for session / Deny), Sessions, Session detail (timeline), Settings (notifications, presence, device name, sign out). Service worker shows pushes and, where the platform supports notification actions, signs and posts Allow/Deny directly.
-- `askgate remote tailscale`: verify `tailscale` exists and HTTPS is enabled for the tailnet; run `tailscale serve --bg` to proxy HTTPS 443 → 127.0.0.1:7517; save `web.public_url`; `remote off|status`.
+- `pilothouse remote tailscale`: verify `tailscale` exists and HTTPS is enabled for the tailnet; run `tailscale serve --bg` to proxy HTTPS 443 → 127.0.0.1:7517; save `web.public_url`; `remote off|status`.
 
 ## 12. Storage (SQLite via modernc.org/sqlite)
 

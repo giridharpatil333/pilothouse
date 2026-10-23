@@ -20,8 +20,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
 )
 
 // Backend is the subset of *client.Client the inbox uses.
@@ -38,7 +38,7 @@ type Backend interface {
 // Options configures the inbox.
 type Options struct {
 	Backend Backend
-	// Exe is the askgate binary used for `askgate attach`; default os.Executable.
+	// Exe is the pilothouse binary used for `pilothouse attach`; default os.Executable.
 	Exe string
 	// Now is the clock; tests fix it.
 	Now func() time.Time
@@ -525,7 +525,7 @@ func (m *Model) rebuild() {
 		held[r.SessionID] = true
 	}
 	sort.Slice(reqs, func(i, j int) bool {
-		// Held requests first (the agent is waiting on Askgate), then
+		// Held requests first (the agent is waiting on Pilothouse), then
 		// oldest first: the longest wait is the most urgent.
 		hi, hj := reqs[i].Status == api.RequestOpen, reqs[j].Status == api.RequestOpen
 		if hi != hj {
@@ -902,7 +902,7 @@ func describeErr(err error, action string) string {
 	case client.IsCode(err, "agent_caller"):
 		return "Refused: this terminal runs inside an agent session, and agents can't approve themselves. Use your own terminal."
 	case errors.Is(err, client.ErrDaemonDown):
-		return "The daemon isn't running: start it with `askgate start`"
+		return "The daemon isn't running: start it with `pilothouse start`"
 	}
 	return "Couldn't " + action + ": " + err.Error()
 }

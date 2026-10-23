@@ -61,7 +61,7 @@ func decode(t *testing.T, doc []byte) map[string]any {
 
 func TestApplyEmptyDocument(t *testing.T) {
 	for _, doc := range []string{"", "  \n", "{}"} {
-		res := mustApply(t, doc, specs("/usr/local/bin/askgate"))
+		res := mustApply(t, doc, specs("/usr/local/bin/pilothouse"))
 		if !res.Changed {
 			t.Fatalf("%q: not changed", doc)
 		}
@@ -74,7 +74,7 @@ func TestApplyEmptyDocument(t *testing.T) {
         "hooks": [
           {
             "type": "command",
-            "command": "/usr/local/bin/askgate hook claude",
+            "command": "/usr/local/bin/pilothouse hook claude",
             "timeout": 30
           }
         ]
@@ -85,7 +85,7 @@ func TestApplyEmptyDocument(t *testing.T) {
         "hooks": [
           {
             "type": "command",
-            "command": "/usr/local/bin/askgate hook claude"
+            "command": "/usr/local/bin/pilothouse hook claude"
           }
         ]
       }
@@ -103,7 +103,7 @@ func TestApplyEmptyDocument(t *testing.T) {
 }
 
 func TestApplyPreservesUserContentAndIsIdempotent(t *testing.T) {
-	res := mustApply(t, userSettings, specs("/usr/local/bin/askgate"))
+	res := mustApply(t, userSettings, specs("/usr/local/bin/pilothouse"))
 	if !res.Changed {
 		t.Fatal("not changed")
 	}
@@ -124,7 +124,7 @@ func TestApplyPreservesUserContentAndIsIdempotent(t *testing.T) {
 		t.Error("permissions lost")
 	}
 
-	again := mustApply(t, out, specs("/usr/local/bin/askgate"))
+	again := mustApply(t, out, specs("/usr/local/bin/pilothouse"))
 	if again.Changed || string(again.Doc) != out {
 		t.Errorf("second apply changed the document:\n%s", Diff("s", out, string(again.Doc)))
 	}
@@ -135,19 +135,19 @@ func TestApplyPreservesUserContentAndIsIdempotent(t *testing.T) {
 	// A user group added after ours must not make us move.
 	m["hooks"].(map[string]any)["PreToolUse"] = append(pre, map[string]any{"hooks": []any{map[string]any{"type": "command", "command": "late.sh"}}})
 	b, _ := json.MarshalIndent(m, "", "  ")
-	if res := mustApply(t, string(b), specs("/usr/local/bin/askgate")); res.Changed {
+	if res := mustApply(t, string(b), specs("/usr/local/bin/pilothouse")); res.Changed {
 		t.Error("reordering on reinstall")
 	}
 }
 
 func TestApplyReplacesStaleShim(t *testing.T) {
-	first := mustApply(t, userSettings, specs("/old/askgate"))
-	second := mustApply(t, string(first.Doc), specs("/new/askgate"))
+	first := mustApply(t, userSettings, specs("/old/pilothouse"))
+	second := mustApply(t, string(first.Doc), specs("/new/pilothouse"))
 	if !second.Changed {
 		t.Fatal("not changed")
 	}
 	out := string(second.Doc)
-	if strings.Contains(out, "/old/askgate") || strings.Count(out, "/new/askgate hook claude") != 2 {
+	if strings.Contains(out, "/old/pilothouse") || strings.Count(out, "/new/pilothouse hook claude") != 2 {
 		t.Errorf("stale entry kept:\n%s", out)
 	}
 	if !strings.Contains(out, "lint.sh") {
@@ -156,7 +156,7 @@ func TestApplyReplacesStaleShim(t *testing.T) {
 }
 
 func TestUninstall(t *testing.T) {
-	installed := mustApply(t, userSettings, specs("/usr/local/bin/askgate"))
+	installed := mustApply(t, userSettings, specs("/usr/local/bin/pilothouse"))
 	res := mustApply(t, string(installed.Doc), nil)
 	if !res.Changed {
 		t.Fatal("not changed")
@@ -168,7 +168,7 @@ func TestUninstall(t *testing.T) {
 		t.Error("second uninstall changed")
 	}
 	// Only-ours: the hooks key disappears entirely.
-	only := mustApply(t, `{"model":"x"}`, specs("/a/askgate"))
+	only := mustApply(t, `{"model":"x"}`, specs("/a/pilothouse"))
 	gone := mustApply(t, string(only.Doc), nil)
 	if m := decode(t, gone.Doc); m["hooks"] != nil || m["model"] != "x" {
 		t.Errorf("got %s", gone.Doc)
@@ -177,8 +177,8 @@ func TestUninstall(t *testing.T) {
 
 func TestApplySharedGroupAndMoved(t *testing.T) {
 	doc := `{"hooks":{"Stop":[
-	  {"hooks":[{"type":"command","command":"/x/askgate hook claude"},{"type":"command","command":"say done"}]},
-	  {"hooks":[{"type":"command","command":"/x/askgate hook claude","timeout":5}]},
+	  {"hooks":[{"type":"command","command":"/x/pilothouse hook claude"},{"type":"command","command":"say done"}]},
+	  {"hooks":[{"type":"command","command":"/x/pilothouse hook claude","timeout":5}]},
 	  {"hooks":[{"type":"command","command":"notify.sh"}]}
 	]}}`
 	res := mustApply(t, doc, nil)
@@ -200,19 +200,19 @@ func TestApplySharedGroupAndMoved(t *testing.T) {
 
 func TestApplyRefusesBadInput(t *testing.T) {
 	for _, doc := range []string{`{"hooks": `, `[1,2]`, `{"hooks": []}`, `{"hooks": {"PreToolUse": {}}}`, `{} {}`} {
-		if _, err := Apply([]byte(doc), specs("/a/askgate"), owned); err == nil {
+		if _, err := Apply([]byte(doc), specs("/a/pilothouse"), owned); err == nil {
 			t.Errorf("%q accepted", doc)
 		}
 	}
 	// A malformed event we do not touch is left alone.
-	res := mustApply(t, `{"hooks": {"Weird": 7}}`, specs("/a/askgate"))
+	res := mustApply(t, `{"hooks": {"Weird": 7}}`, specs("/a/pilothouse"))
 	if decode(t, res.Doc)["hooks"].(map[string]any)["Weird"] != 7.0 {
 		t.Error("foreign value lost")
 	}
 }
 
 func TestDetectIndent(t *testing.T) {
-	res := mustApply(t, "{\n\t\"a\": 1\n}\n", specs("/a/askgate"))
+	res := mustApply(t, "{\n\t\"a\": 1\n}\n", specs("/a/pilothouse"))
 	if !strings.Contains(string(res.Doc), "\n\t\"a\": 1,\n\t\"hooks\"") {
 		t.Errorf("tab indent not kept:\n%s", res.Doc)
 	}
@@ -220,16 +220,16 @@ func TestDetectIndent(t *testing.T) {
 
 func TestOwnedBy(t *testing.T) {
 	for cmd, want := range map[string]bool{
-		"/usr/local/bin/askgate hook claude":     true,
-		"askgate hook claude":                    true,
-		"'/Users/a b/askgate' hook claude":       true,
-		"/tmp/go-build1/askgate-dev hook claude": true,
-		"/usr/local/bin/askgate hook codex":      false,
-		"/usr/local/bin/askgate hook claudette":  false,
-		"/usr/local/bin/notaskgate hook claude":  false,
-		"echo askgate":                           false,
-		"/opt/askgate/bin/other hook claude":     false,
-		"/usr/local/bin/askgate  hook  claude ":  true,
+		"/usr/local/bin/pilothouse hook claude":     true,
+		"pilothouse hook claude":                    true,
+		"'/Users/a b/pilothouse' hook claude":       true,
+		"/tmp/go-build1/pilothouse-dev hook claude": true,
+		"/usr/local/bin/pilothouse hook codex":      false,
+		"/usr/local/bin/pilothouse hook claudette":  false,
+		"/usr/local/bin/notpilothouse hook claude":  false,
+		"echo pilothouse":                           false,
+		"/opt/pilothouse/bin/other hook claude":     false,
+		"/usr/local/bin/pilothouse  hook  claude ":  true,
 	} {
 		if got := owned(cmd); got != want {
 			t.Errorf("owned(%q) = %v, want %v", cmd, got, want)
@@ -239,9 +239,9 @@ func TestOwnedBy(t *testing.T) {
 
 func TestShellQuoteAndProgram(t *testing.T) {
 	for in, want := range map[string]string{
-		"/usr/local/bin/askgate": "/usr/local/bin/askgate",
-		"/Users/a b/askgate":     "'/Users/a b/askgate'",
-		"/it's/askgate":          `'/it'\''s/askgate'`,
+		"/usr/local/bin/pilothouse": "/usr/local/bin/pilothouse",
+		"/Users/a b/pilothouse":     "'/Users/a b/pilothouse'",
+		"/it's/pilothouse":          `'/it'\''s/pilothouse'`,
 		"":                       "''",
 	} {
 		q := ShellQuote(in)
@@ -261,7 +261,7 @@ func TestDiff(t *testing.T) {
 		t.Error("equal inputs diffed")
 	}
 	d := Diff("f", "1\n2\n3\n4\n5\n6\n7\n8\n9\n", "1\n2\n3\n4\nX\n6\n7\n8\n9\n")
-	want := "--- f\n+++ f (askgate)\n@@ -2,7 +2,7 @@\n 2\n 3\n 4\n-5\n+X\n 6\n 7\n 8\n"
+	want := "--- f\n+++ f (pilothouse)\n@@ -2,7 +2,7 @@\n 2\n 3\n 4\n-5\n+X\n 6\n 7\n 8\n"
 	if d != want {
 		t.Errorf("got:\n%s\nwant:\n%s", d, want)
 	}
@@ -301,7 +301,7 @@ func TestCommitBackupAndSymlink(t *testing.T) {
 	if err := os.Symlink(real, link); err != nil {
 		t.Fatal(err)
 	}
-	p, err := PlanJSON(link, specs("/a/askgate"), owned)
+	p, err := PlanJSON(link, specs("/a/pilothouse"), owned)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +310,7 @@ func TestCommitBackupAndSymlink(t *testing.T) {
 	if err := p.Commit(&ch, now); err != nil {
 		t.Fatal(err)
 	}
-	if ch.Backup != link+".askgate-bak-1700000000" {
+	if ch.Backup != link+".pilothouse-bak-1700000000" {
 		t.Errorf("Backup = %q", ch.Backup)
 	}
 	if b, _ := os.ReadFile(ch.Backup); string(b) != userSettings {
@@ -322,7 +322,7 @@ func TestCommitBackupAndSymlink(t *testing.T) {
 	if fi, _ := os.Stat(real); fi.Mode().Perm() != 0o644 {
 		t.Errorf("mode = %v", fi.Mode().Perm())
 	}
-	if b, _ := os.ReadFile(real); !strings.Contains(string(b), "askgate hook claude") {
+	if b, _ := os.ReadFile(real); !strings.Contains(string(b), "pilothouse hook claude") {
 		t.Error("target not updated")
 	}
 	// Same second again: a distinct backup name.
@@ -331,13 +331,13 @@ func TestCommitBackupAndSymlink(t *testing.T) {
 	if err := p2.Commit(&ch2, now); err != nil {
 		t.Fatal(err)
 	}
-	if ch2.Backup != link+".askgate-bak-1700000000-1" {
+	if ch2.Backup != link+".pilothouse-bak-1700000000-1" {
 		t.Errorf("second Backup = %q", ch2.Backup)
 	}
 	// No temp files left behind.
 	ents, _ := os.ReadDir(filepath.Dir(real))
 	for _, e := range ents {
-		if strings.Contains(e.Name(), "askgate-tmp") {
+		if strings.Contains(e.Name(), "pilothouse-tmp") {
 			t.Errorf("leftover %s", e.Name())
 		}
 	}
@@ -348,7 +348,7 @@ func TestPlanRefusesInvalidJSON(t *testing.T) {
 	if err := os.WriteFile(path, []byte(`{"model": "x",}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := PlanJSON(path, specs("/a/askgate"), owned)
+	_, err := PlanJSON(path, specs("/a/pilothouse"), owned)
 	if err == nil || !strings.Contains(err.Error(), "refusing to modify") {
 		t.Fatalf("err = %v", err)
 	}
@@ -359,14 +359,14 @@ func TestPlanRefusesInvalidJSON(t *testing.T) {
 
 func TestProblems(t *testing.T) {
 	dir := t.TempDir()
-	exe := filepath.Join(dir, "askgate")
+	exe := filepath.Join(dir, "pilothouse")
 	if err := os.WriteFile(exe, []byte("#!/bin/sh\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	found := []Found{
 		{Command: ShimCommand(exe, "claude")},
-		{Command: ShimCommand(filepath.Join(dir, "gone", "askgate"), "claude")},
-		{Command: "askgate hook claude"},
+		{Command: ShimCommand(filepath.Join(dir, "gone", "pilothouse"), "claude")},
+		{Command: "pilothouse hook claude"},
 	}
 	probs := Problems(found)
 	if len(probs) != 1 || !strings.Contains(probs[0], "does not exist") {
@@ -376,7 +376,7 @@ func TestProblems(t *testing.T) {
 
 func TestDiffAppendAtEnd(t *testing.T) {
 	d := Diff("f", "a\nb\n", "a\nb\nc\n")
-	if want := "--- f\n+++ f (askgate)\n@@ -1,2 +1,3 @@\n a\n b\n+c\n"; d != want {
+	if want := "--- f\n+++ f (pilothouse)\n@@ -1,2 +1,3 @@\n a\n b\n+c\n"; d != want {
 		t.Errorf("got:\n%s", d)
 	}
 }

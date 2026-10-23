@@ -1,7 +1,7 @@
- askgate  studio.local  ● here · auto   3 need you   ● live
+ pilothouse  studio.local        ● here · auto   3 need you
 
  NEEDS YOU 3
-▌ ● claude  askgate       $ git push origin feat/in…   12s
+▌ ● claude  pilothouse    $ git push origin feat/in…   12s
   ○ codex   webapp        apply_patch ~/src/webapp/… 1m04s
   ○ claude  api · main    Asked: Which database sho… 3m20s
 
@@ -10,13 +10,13 @@
   ● codex   infra         Editing modules/vpc/main.…   41s
 
  WAITING 2
-  ● claude  askgate-site  Done. The landing page no… 2m05s
+  ● claude  pilothouse-s… Done. The landing page no… 2m05s
   ✗ generic scratch       Reported an error            25m
 
    ↓ 1 more
 ── r_7hq2m4 · claude · held for you · back to the terminal …
   $ git push origin feat/inbox --force-with-lease
-  where  askgate · feat/inbox  ~/src/askgate
+  where  pilothouse · feat/inbox  ~/src/pilothouse
   rule   ask-on-push · your policy asks a person for this
   said   “Tests pass. Pushing the branch so CI can run.”
 

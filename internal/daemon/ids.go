@@ -15,7 +15,7 @@ func newID(prefix string) string {
 	if _, err := rand.Read(b[:]); err != nil {
 		// crypto/rand never fails on supported platforms; if it does, ids
 		// would collide and nothing downstream is safe.
-		panic("askgate: crypto/rand failed: " + err.Error())
+		panic("pilothouse: crypto/rand failed: " + err.Error())
 	}
 	return prefix + strings.ToLower(idEncoding.EncodeToString(b[:]))[:10]
 }

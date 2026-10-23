@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // NoOpinion is exit 0 with no output: the agent carries on as if no hook
@@ -18,11 +18,11 @@ var NoOpinion = adapters.HookResponse{}
 
 // DefaultDenyReason is used when a deny carries no message: both agents
 // require a non-empty reason (Codex rejects a deny without one).
-const DefaultDenyReason = "Blocked by Askgate policy."
+const DefaultDenyReason = "Blocked by Pilothouse policy."
 
 // FailClosedReason is shown when the daemon is unreachable and
 // approvals.fail_closed is on.
-const FailClosedReason = "Askgate is not running and approvals.fail_closed is on, so tool calls are blocked. Start it with `askgate start`, or set approvals.fail_closed: false."
+const FailClosedReason = "Pilothouse is not running and approvals.fail_closed is on, so tool calls are blocked. Start it with `pilothouse start`, or set approvals.fail_closed: false."
 
 type preToolOutput struct {
 	HookEventName            string `json:"hookEventName"`
@@ -76,7 +76,7 @@ func PermissionResponse(b api.Behavior, message string) adapters.HookResponse {
 	if b == api.BehaviorDeny {
 		d.Message = message
 		if strings.TrimSpace(message) == "" {
-			d.Message = "Denied through Askgate."
+			d.Message = "Denied through Pilothouse."
 		}
 	}
 	return jsonResponse(envelope{HookSpecificOutput: permissionOutput{HookEventName: "PermissionRequest", Decision: d}})

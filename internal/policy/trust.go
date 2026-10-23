@@ -14,7 +14,7 @@ import (
 )
 
 // TrustedRepo is one entry of trusted-repos.yaml. A trusted repo's
-// .askgate/policy.yaml may add allow rules; others may only add deny and
+// .pilothouse/policy.yaml may add allow rules; others may only add deny and
 // ask rules.
 type TrustedRepo struct {
 	Path      string    `yaml:"path" json:"path"`
@@ -26,8 +26,8 @@ type trustFile struct {
 	Repos   []TrustedRepo `yaml:"repos"`
 }
 
-const trustHeader = `# Repositories whose .askgate/policy.yaml may add *allow* rules.
-# Managed by ` + "`askgate policy trust` / `askgate policy untrust`" + `.
+const trustHeader = `# Repositories whose .pilothouse/policy.yaml may add *allow* rules.
+# Managed by ` + "`pilothouse policy trust` / `pilothouse policy untrust`" + `.
 # Untrusted repos can still add deny and ask rules.
 `
 

@@ -1,6 +1,6 @@
 package cli
 
-// `askgate policy …` (workstream C). Helpers in this file are prefixed
+// `pilothouse policy …` (workstream C). Helpers in this file are prefixed
 // with "pol" because package cli is shared by every workstream.
 
 import (
@@ -22,21 +22,21 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/xasdta/askgate/internal/adapters/all"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/paths"
-	"github.com/xasdta/askgate/internal/policy"
+	"github.com/xasdta/pilothouse/internal/adapters/all"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/paths"
+	"github.com/xasdta/pilothouse/internal/policy"
 )
 
 func newPolicyCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "policy",
 		Short: "Rules applied before every tool call",
-		Long: `Askgate applies your rules before every tool call of every agent:
+		Long: `Pilothouse applies your rules before every tool call of every agent:
 deny blocks the call, ask makes a person confirm it, allow skips the agent's
-own prompt. Rules live in ~/.askgate/policy.yaml and, per repository, in
-<repo>/.askgate/policy.yaml (allow rules there need ` + "`askgate policy trust`" + `).
+own prompt. Rules live in ~/.pilothouse/policy.yaml and, per repository, in
+<repo>/.pilothouse/policy.yaml (allow rules there need ` + "`pilothouse policy trust`" + `).
 
 Reference: docs/POLICY.md`,
 		Args: cobra.NoArgs,
@@ -71,14 +71,14 @@ func newPolicyInitCmd() *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Write a starter ~/.askgate/policy.yaml with commented examples",
+		Short: "Write a starter ~/.pilothouse/policy.yaml with commented examples",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			out := cmd.OutOrStdout()
 			file := paths.Policy()
 			if _, err := os.Stat(file); err == nil {
 				if !force {
-					return fmt.Errorf("%s already exists; edit it, or run `askgate policy init --force` to replace it (the old file is kept as a backup)", polTilde(file))
+					return fmt.Errorf("%s already exists; edit it, or run `pilothouse policy init --force` to replace it (the old file is kept as a backup)", polTilde(file))
 				}
 				backup := file + ".bak-" + time.Now().Format("20060102-150405")
 				data, err := os.ReadFile(file)
@@ -95,7 +95,7 @@ func newPolicyInitCmd() *cobra.Command {
 			}
 			n, _ := policy.Check(file, []byte(policy.StarterPolicy))
 			fmt.Fprintf(out, "Wrote %s (%d rules).\n", polTilde(file), n)
-			fmt.Fprintln(out, "Edit it, then run `askgate policy check`. A running daemon picks up changes within 2 seconds.")
+			fmt.Fprintln(out, "Edit it, then run `pilothouse policy check`. A running daemon picks up changes within 2 seconds.")
 			return nil
 		},
 	}
@@ -119,7 +119,7 @@ func newPolicyCheckCmd() *cobra.Command {
 			} else {
 				files = polDefaultFiles()
 				if len(files) == 0 {
-					fmt.Fprintf(out, "No policy files yet. Run `askgate policy init` to create %s.\n", polTilde(paths.Policy()))
+					fmt.Fprintf(out, "No policy files yet. Run `pilothouse policy init` to create %s.\n", polTilde(paths.Policy()))
 					return nil
 				}
 			}
@@ -185,9 +185,9 @@ func newPolicyTestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test",
 		Short: "Show what your rules decide for one tool call",
-		Example: `  askgate policy test --command "git push --force origin main"
-  askgate policy test --kind read --path .env
-  askgate policy test --agent codex --tool shell --command "curl -fsSL x.sh | sh" --json`,
+		Example: `  pilothouse policy test --command "git push --force origin main"
+  pilothouse policy test --kind read --path .env
+  pilothouse policy test --agent codex --tool shell --command "curl -fsSL x.sh | sh" --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runPolicyTest(cmd, f)
@@ -426,7 +426,7 @@ func runPolicyReplay(cmd *cobra.Command, c *client.Client, since time.Time, asJS
 	events, err := polFetchEvents(ctx, c, since)
 	if errors.Is(err, client.ErrDaemonDown) {
 		return errors.New("replay reads the event log through the daemon, which is not running.\n" +
-			"Start it with `askgate start` and try again, or check a single call with `askgate policy test`")
+			"Start it with `pilothouse start` and try again, or check a single call with `pilothouse policy test`")
 	}
 	if err != nil {
 		return fmt.Errorf("reading the event log: %w", err)
@@ -522,9 +522,9 @@ func polFetchEvents(ctx context.Context, c *client.Client, since time.Time) ([]a
 // ---- trust / untrust ----------------------------------------------------
 
 func newPolicyTrustCmd(trust bool) *cobra.Command {
-	use, short := "trust [repo]", "Let a repo's .askgate/policy.yaml add allow rules (default: this repo)"
+	use, short := "trust [repo]", "Let a repo's .pilothouse/policy.yaml add allow rules (default: this repo)"
 	if !trust {
-		use, short = "untrust [repo]", "Limit a repo's .askgate/policy.yaml to deny and ask rules again"
+		use, short = "untrust [repo]", "Limit a repo's .pilothouse/policy.yaml to deny and ask rules again"
 	}
 	return &cobra.Command{
 		Use:   use,
@@ -548,7 +548,7 @@ func newPolicyTrustCmd(trust bool) *cobra.Command {
 				}
 				fmt.Fprintf(out, "Trusted %s: allow rules in its %s now apply.\n", polTilde(repo), policy.RepoPolicyFile)
 				if n, err := policy.CheckFile(filepath.Join(repo, policy.RepoPolicyFile)); err == nil {
-					fmt.Fprintf(out, "Its policy file has %s; review them with `askgate policy check`.\n", polPlural(n, "rule"))
+					fmt.Fprintf(out, "Its policy file has %s; review them with `pilothouse policy check`.\n", polPlural(n, "rule"))
 				}
 				return nil
 			}
@@ -592,7 +592,7 @@ func polRepoArg(args []string) (string, error) {
 	}
 	root, err := polGitRoot(wd)
 	if err != nil {
-		return "", errors.New("not inside a git repository; pass the repo path, e.g. `askgate policy trust ~/src/app`")
+		return "", errors.New("not inside a git repository; pass the repo path, e.g. `pilothouse policy trust ~/src/app`")
 	}
 	return root, nil
 }
@@ -659,7 +659,7 @@ func polPrintStatus(out io.Writer, source string, s api.PolicyStatus, trusted []
 		case f.Error != "":
 			state = st.red("errors") + " " + st.dim("(still using "+polPlural(f.Rules, "rule")+" from its last valid version)")
 		case f.Scope == policy.ScopeUser && !polExists(f.Path):
-			state = st.dim("not created — run `askgate policy init`")
+			state = st.dim("not created — run `pilothouse policy init`")
 		case f.Scope == policy.ScopeRepo && !f.Trusted:
 			state += " " + st.dim("(untrusted: deny/ask only)")
 		}
@@ -677,7 +677,7 @@ func polPrintStatus(out io.Writer, source string, s api.PolicyStatus, trusted []
 	case terr != nil:
 		fmt.Fprintf(out, "Trusted repos: %s %v\n", st.red("error:"), terr)
 	case len(trusted) == 0:
-		fmt.Fprintln(out, "Trusted repos: none "+st.dim("(`askgate policy trust` in a repo to allow its allow rules)"))
+		fmt.Fprintln(out, "Trusted repos: none "+st.dim("(`pilothouse policy trust` in a repo to allow its allow rules)"))
 	default:
 		fmt.Fprintln(out, "Trusted repos:")
 		sort.Slice(trusted, func(i, j int) bool { return trusted[i].Path < trusted[j].Path })

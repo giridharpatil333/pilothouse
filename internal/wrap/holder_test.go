@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 type holderRun struct {
@@ -104,11 +104,11 @@ func TestHolderWithoutDaemon(t *testing.T) {
 func TestHolderEnvironment(t *testing.T) {
 	testEnv(t)
 	h := startHolder(t, HolderConfig{
-		Argv:   []string{"/bin/sh", "-c", `echo "env:$ASKGATE:$ASKGATE_SESSION_ID:$ASKGATE_TASK_ID:$TERM"; stty size; read x`},
+		Argv:   []string{"/bin/sh", "-c", `echo "env:$PILOTHOUSE:$PILOTHOUSE_SESSION_ID:$PILOTHOUSE_TASK_ID:$TERM"; stty size; read x`},
 		TaskID: "t_abc",
 		// No TERM: the holder supplies one. Stale ids from an outer
 		// session are replaced.
-		Env:  []string{"PATH=/usr/bin:/bin", "ASKGATE_SESSION_ID=s_outer", "ASKGATE_TASK_ID=t_outer"},
+		Env:  []string{"PATH=/usr/bin:/bin", "PILOTHOUSE_SESSION_ID=s_outer", "PILOTHOUSE_TASK_ID=t_outer"},
 		Cols: 91, Rows: 27,
 	})
 	s := attachSession(t, h.sock, true)

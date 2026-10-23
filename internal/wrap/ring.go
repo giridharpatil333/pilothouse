@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // ScrollbackSize is how much recent output a holder keeps for `--replay`.
@@ -60,7 +60,7 @@ var idEncoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadd
 
 // NewSessionID returns "s_" + 10 random lowercase base32 characters
 // (BUILD-SPEC §4). The holder picks its own id so it can export
-// ASKGATE_SESSION_ID before the daemon has heard of it.
+// PILOTHOUSE_SESSION_ID before the daemon has heard of it.
 func NewSessionID() string { return NewID("s_") }
 
 // NewID returns prefix + 10 crypto-random lowercase base32 characters.

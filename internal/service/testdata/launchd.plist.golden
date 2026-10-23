@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Written by askgate service install. Changes are overwritten; edit ~/.askgate/config.yaml instead. -->
+<!-- Written by pilothouse service install. Changes are overwritten; edit ~/.pilothouse/config.yaml instead. -->
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>dev.askgate.daemon</string>
+	<string>dev.pilothouse.daemon</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/usr/local/bin/askgate</string>
+		<string>/usr/local/bin/pilothouse</string>
 		<string>daemon</string>
 		<string>--log-file</string>
-		<string>/opt/askgate-test/home/logs/daemon.log</string>
+		<string>/opt/pilothouse-test/home/logs/daemon.log</string>
 	</array>
 	<key>EnvironmentVariables</key>
 	<dict>
-		<key>ASKGATE_HOME</key>
-		<string>/opt/askgate-test/home</string>
 		<key>PATH</key>
 		<string>/opt/homebrew/bin:/usr/bin:/bin</string>
+		<key>PILOTHOUSE_HOME</key>
+		<string>/opt/pilothouse-test/home</string>
 	</dict>
 	<key>RunAtLoad</key>
 	<true/>
@@ -31,6 +31,6 @@
 	<key>ProcessType</key>
 	<string>Interactive</string>
 	<key>StandardErrorPath</key>
-	<string>/opt/askgate-test/home/logs/daemon.stderr.log</string>
+	<string>/opt/pilothouse-test/home/logs/daemon.stderr.log</string>
 </dict>
 </plist>

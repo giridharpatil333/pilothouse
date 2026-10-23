@@ -142,7 +142,7 @@ function build(req, opts) {
     const label = behavior === 'deny' ? 'Denied' : scope === 'session' ? 'Allowed for this session' : 'Allowed';
     showOutcome({ cls: behavior === 'allow' ? 'allow' : 'deny', icon: behavior === 'allow' ? 'check' : 'x', text: label });
     settling.add(current.id);
-    const res = await self.AskgateKeys.decide(current.id, behavior, scope, message);
+    const res = await self.PilothouseKeys.decide(current.id, behavior, scope, message);
     busy = false;
     if (res.ok) {
       store.requests.set(res.data.id, res.data);

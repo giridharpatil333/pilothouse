@@ -49,7 +49,7 @@ func pathPattern(p, home string) string {
 }
 
 // caseInsensitiveFS is true where the default filesystem ignores case
-// (APFS/HFS+ on macOS), so "~/.ASKGATE" and "~/.askgate" are the same
+// (APFS/HFS+ on macOS), so "~/.PILOTHOUSE" and "~/.pilothouse" are the same
 // directory for protected-path checks.
 var caseInsensitiveFS = runtime.GOOS == "darwin"
 

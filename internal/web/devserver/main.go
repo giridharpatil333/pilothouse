@@ -6,7 +6,7 @@
 //	go run -tags devserver ./internal/web/devserver -addr 127.0.0.1:7600 [-demo]
 //
 // It prints a one-time login link. Everything lives in a temp dir
-// (ASKGATE_HOME is overridden); nothing touches ~/.askgate.
+// (PILOTHOUSE_HOME is overridden); nothing touches ~/.pilothouse.
 package main
 
 import (
@@ -25,11 +25,11 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/config"
-	"github.com/xasdta/askgate/internal/web"
-	"github.com/xasdta/askgate/internal/web/webtest"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/config"
+	"github.com/xasdta/pilothouse/internal/web"
+	"github.com/xasdta/pilothouse/internal/web/webtest"
 )
 
 func main() {
@@ -37,11 +37,11 @@ func main() {
 	demo := flag.Bool("demo", false, "keep generating new requests and activity")
 	flag.Parse()
 
-	dir, err := os.MkdirTemp("", "askgate-dev")
+	dir, err := os.MkdirTemp("", "pilothouse-dev")
 	must(err)
 	defer os.RemoveAll(dir)
-	must(os.Setenv("ASKGATE_HOME", dir))
-	must(os.Setenv("ASKGATE_USER_HOME", dir))
+	must(os.Setenv("PILOTHOUSE_HOME", dir))
+	must(os.Setenv("PILOTHOUSE_USER_HOME", dir))
 
 	db, err := sql.Open("sqlite", filepath.Join(dir, "dev.db")+"?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)")
 	must(err)
@@ -71,7 +71,7 @@ func main() {
 	local.ServeHTTP(rec, httptest.NewRequest("POST", "/v1/pair", nil))
 	var pair api.PairStart
 	must(json.Unmarshal(rec.Body.Bytes(), &pair))
-	fmt.Printf("askgate devserver on http://%s\n  login: %s\n  pair:  %s\n", *addr, link.URL, pair.URL)
+	fmt.Printf("pilothouse devserver on http://%s\n  login: %s\n  pair:  %s\n", *addr, link.URL, pair.URL)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -107,20 +107,20 @@ func seed(fc *webtest.FakeCore) {
 	ago := func(d time.Duration) time.Time { return now.Add(-d) }
 	hook := func(sid string, when time.Duration, ev adapters.HookEvent) {
 		at = ago(when)
-		ev.Cwd = "/Users/dev/src/askgate"
+		ev.Cwd = "/Users/dev/src/pilothouse"
 		_, _ = fc.Emit(context.Background(), api.EventHook, sid, "", ev)
 	}
 
 	at = ago(48 * time.Minute)
-	fc.PutSession(api.Session{ID: "s_askgate01", Agent: api.AgentClaude, Mode: api.ModeWrapped, Machine: "studio", Title: "askgate",
-		Cwd: "/Users/dev/src/askgate", RepoRoot: "/Users/dev/src/askgate", Branch: "main", State: api.StateWorking,
+	fc.PutSession(api.Session{ID: "s_pilothouse01", Agent: api.AgentClaude, Mode: api.ModeWrapped, Machine: "studio", Title: "pilothouse",
+		Cwd: "/Users/dev/src/pilothouse", RepoRoot: "/Users/dev/src/pilothouse", Branch: "main", State: api.StateWorking,
 		StartedAt: ago(48 * time.Minute), UpdatedAt: ago(48 * time.Minute)})
-	hook("s_askgate01", 47*time.Minute, adapters.HookEvent{Kind: adapters.HookSessionStart, VendorEvent: "SessionStart"})
-	hook("s_askgate01", 46*time.Minute, adapters.HookEvent{Kind: adapters.HookPromptSubmit, Message: "Finish the web inbox, make sure every test passes, then push to main."})
-	hook("s_askgate01", 41*time.Minute, adapters.HookEvent{Kind: adapters.HookPreTool, Tool: "Read", ToolKind: api.ToolRead, Paths: []string{"/Users/dev/src/askgate/internal/web/web.go"}, Summary: "Read web.go"})
-	hook("s_askgate01", 33*time.Minute, adapters.HookEvent{Kind: adapters.HookPreTool, Tool: "Edit", ToolKind: api.ToolEdit, Paths: []string{"/Users/dev/src/askgate/internal/web/static/js/card.js"}, Summary: "Edit card.js"})
-	hook("s_askgate01", 12*time.Minute, adapters.HookEvent{Kind: adapters.HookPreTool, Tool: "Bash", ToolKind: api.ToolShell, Command: "go test -race ./internal/web/...", Summary: "Run tests"})
-	hook("s_askgate01", 4*time.Minute, adapters.HookEvent{Kind: adapters.HookPreTool, Tool: "Bash", ToolKind: api.ToolShell, Command: `git commit -am "web: optimistic decisions with rollback"`, Summary: "Commit"})
+	hook("s_pilothouse01", 47*time.Minute, adapters.HookEvent{Kind: adapters.HookSessionStart, VendorEvent: "SessionStart"})
+	hook("s_pilothouse01", 46*time.Minute, adapters.HookEvent{Kind: adapters.HookPromptSubmit, Message: "Finish the web inbox, make sure every test passes, then push to main."})
+	hook("s_pilothouse01", 41*time.Minute, adapters.HookEvent{Kind: adapters.HookPreTool, Tool: "Read", ToolKind: api.ToolRead, Paths: []string{"/Users/dev/src/pilothouse/internal/web/web.go"}, Summary: "Read web.go"})
+	hook("s_pilothouse01", 33*time.Minute, adapters.HookEvent{Kind: adapters.HookPreTool, Tool: "Edit", ToolKind: api.ToolEdit, Paths: []string{"/Users/dev/src/pilothouse/internal/web/static/js/card.js"}, Summary: "Edit card.js"})
+	hook("s_pilothouse01", 12*time.Minute, adapters.HookEvent{Kind: adapters.HookPreTool, Tool: "Bash", ToolKind: api.ToolShell, Command: "go test -race ./internal/web/...", Summary: "Run tests"})
+	hook("s_pilothouse01", 4*time.Minute, adapters.HookEvent{Kind: adapters.HookPreTool, Tool: "Bash", ToolKind: api.ToolShell, Command: `git commit -am "web: optimistic decisions with rollback"`, Summary: "Commit"})
 
 	at = ago(95 * time.Minute)
 	fc.PutSession(api.Session{ID: "s_proofline", Agent: api.AgentClaude, Mode: api.ModeObserved, Machine: "studio", Title: "proofline",
@@ -166,11 +166,11 @@ func seed(fc *webtest.FakeCore) {
 
 	// Open requests last, so they're the newest events.
 	at = ago(70 * time.Second)
-	fc.PutSession(api.Session{ID: "s_askgate01", Agent: api.AgentClaude, Mode: api.ModeWrapped, Machine: "studio", Title: "askgate",
-		Cwd: "/Users/dev/src/askgate", RepoRoot: "/Users/dev/src/askgate", Branch: "main", State: api.StateBlocked, BlockKind: api.BlockPermission,
+	fc.PutSession(api.Session{ID: "s_pilothouse01", Agent: api.AgentClaude, Mode: api.ModeWrapped, Machine: "studio", Title: "pilothouse",
+		Cwd: "/Users/dev/src/pilothouse", RepoRoot: "/Users/dev/src/pilothouse", Branch: "main", State: api.StateBlocked, BlockKind: api.BlockPermission,
 		StateDetail: "Asked to run git push origin main", Unseen: true, StartedAt: ago(48 * time.Minute), UpdatedAt: ago(70 * time.Second)})
-	fc.PutRequest(api.Request{ID: "r_gitpush03", SessionID: "s_askgate01", Agent: api.AgentClaude, Checkpoint: api.CheckpointPermission,
-		Tool: "Bash", ToolKind: api.ToolShell, Command: "git push origin main", Summary: "Run: git push origin main", Cwd: "/Users/dev/src/askgate",
+	fc.PutRequest(api.Request{ID: "r_gitpush03", SessionID: "s_pilothouse01", Agent: api.AgentClaude, Checkpoint: api.CheckpointPermission,
+		Tool: "Bash", ToolKind: api.ToolShell, Command: "git push origin main", Summary: "Run: git push origin main", Cwd: "/Users/dev/src/pilothouse",
 		Status: api.RequestOpen, Route: api.RouteDevices, PolicyRule: "ask-before-push", CreatedAt: ago(70 * time.Second), ExpiresAt: now.Add(7*time.Minute + 50*time.Second)})
 	at = ago(25 * time.Second)
 	fc.PutSession(api.Session{ID: "s_infra0006", Agent: api.AgentClaude, Mode: api.ModeObserved, Machine: "studio", Title: "infra",

@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 func openTest(t *testing.T) *DB {
 	t.Helper()
-	db, err := Open(filepath.Join(t.TempDir(), "askgate.db"))
+	db, err := Open(filepath.Join(t.TempDir(), "pilothouse.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func putSession(t *testing.T, db *DB, s api.Session) {
 }
 
 func TestOpenIsIdempotentAndPrivate(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "askgate.db")
+	path := filepath.Join(t.TempDir(), "pilothouse.db")
 	for i := 0; i < 2; i++ {
 		db, err := Open(path)
 		if err != nil {

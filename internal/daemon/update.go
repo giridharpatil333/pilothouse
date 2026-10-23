@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/store"
-	"github.com/xasdta/askgate/internal/version"
+	"github.com/xasdta/pilothouse/internal/store"
+	"github.com/xasdta/pilothouse/internal/version"
 )
 
 // The anonymous update check (BUILD-SPEC invariant 7) sends only the
@@ -30,7 +30,7 @@ const (
 )
 
 // updateURL is a variable so tests can point it at a local server.
-var updateURL = "https://askgate.dev/api/version"
+var updateURL = "https://pilothouse.dev/api/version"
 
 func (d *Daemon) updateCheckEnabled() bool {
 	// Development builds ("dev") never phone home: that also keeps every
@@ -90,7 +90,7 @@ func (d *Daemon) checkForUpdate(ctx context.Context) {
 	if err != nil {
 		return
 	}
-	req.Header.Set("User-Agent", "askgate/"+version.Version)
+	req.Header.Set("User-Agent", "pilothouse/"+version.Version)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return
@@ -108,8 +108,8 @@ func (d *Daemon) checkForUpdate(ctx context.Context) {
 	}
 	latest := firstNonEmpty(body.Latest, body.Version)
 	if newerVersion(latest, version.Version) {
-		d.log.Info("a newer askgate is available", "current", version.Version, "latest", latest,
-			"upgrade", "https://askgate.dev/install")
+		d.log.Info("a newer pilothouse is available", "current", version.Version, "latest", latest,
+			"upgrade", "https://pilothouse.dev/install")
 	}
 }
 

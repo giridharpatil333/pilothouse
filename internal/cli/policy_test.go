@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/paths"
-	"github.com/xasdta/askgate/internal/policy"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/paths"
+	"github.com/xasdta/pilothouse/internal/policy"
 )
 
 // polTestEnv isolates every location (BUILD-SPEC §2.1).
@@ -31,9 +31,9 @@ func polTestEnv(t *testing.T) (home string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(run) })
-	t.Setenv("ASKGATE_HOME", filepath.Join(home, ".askgate"))
-	t.Setenv("ASKGATE_USER_HOME", home)
-	t.Setenv("ASKGATE_RUN_DIR", run)
+	t.Setenv("PILOTHOUSE_HOME", filepath.Join(home, ".pilothouse"))
+	t.Setenv("PILOTHOUSE_USER_HOME", home)
+	t.Setenv("PILOTHOUSE_RUN_DIR", run)
 	t.Setenv("NO_COLOR", "1")
 	return home
 }
@@ -52,7 +52,7 @@ func polRun(t *testing.T, args ...string) (string, error) {
 func TestPolicyInit(t *testing.T) {
 	polTestEnv(t)
 	out, err := polRun(t, "init")
-	if err != nil || !strings.Contains(out, "Wrote ~/.askgate/policy.yaml (7 rules)") {
+	if err != nil || !strings.Contains(out, "Wrote ~/.pilothouse/policy.yaml (7 rules)") {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
 	fi, err := os.Stat(paths.Policy())
@@ -88,7 +88,7 @@ func TestPolicyCheck(t *testing.T) {
 	if _, err := polRun(t, "init"); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := polRun(t, "check"); err != nil || !strings.Contains(out, "✓ ~/.askgate/policy.yaml  7 rules") {
+	if out, err := polRun(t, "check"); err != nil || !strings.Contains(out, "✓ ~/.pilothouse/policy.yaml  7 rules") {
 		t.Fatalf("valid: %v %s", err, out)
 	}
 	bad := filepath.Join(home, "bad.yaml")
@@ -116,7 +116,7 @@ func TestPolicyTestCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Decision: DENY by no-force-push (~/.askgate/policy.yaml)", "Message:  Force-push is blocked", "Matched:", "deny  no-force-push"} {
+	for _, want := range []string{"Decision: DENY by no-force-push (~/.pilothouse/policy.yaml)", "Message:  Force-push is blocked", "Matched:", "deny  no-force-push"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)
 		}
@@ -146,8 +146,8 @@ func TestPolicyTestCommand(t *testing.T) {
 	if !strings.Contains(out, "Decision: none") {
 		t.Errorf("no match output:\n%s", out)
 	}
-	out, _ = polRun(t, "test", "--agent", "codex", "--tool", "shell", "--command", "askgate approve r_1", "--repo", "")
-	if !strings.Contains(out, "ASK by askgate-self-protection (built-in)") {
+	out, _ = polRun(t, "test", "--agent", "codex", "--tool", "shell", "--command", "pilothouse approve r_1", "--repo", "")
+	if !strings.Contains(out, "ASK by pilothouse-self-protection (built-in)") {
 		t.Errorf("self-protection output:\n%s", out)
 	}
 	out, _ = polRun(t, "test", "--path", "x.go", "--repo", "")
@@ -180,7 +180,7 @@ func TestPolicyToolKind(t *testing.T) {
 func TestPolicyTrustAndStatus(t *testing.T) {
 	home := polTestEnv(t)
 	repo := filepath.Join(home, "proj")
-	os.MkdirAll(filepath.Join(repo, ".askgate"), 0o700)
+	os.MkdirAll(filepath.Join(repo, ".pilothouse"), 0o700)
 	os.WriteFile(filepath.Join(repo, policy.RepoPolicyFile), []byte("version: 1\nrules:\n  - {name: m, match: {command: \"make*\"}, action: allow}\n"), 0o600)
 
 	out, err := polRun(t, "trust", repo)
@@ -221,7 +221,7 @@ func TestPolicyTrustAndStatus(t *testing.T) {
 func TestPolicyReplayDaemonDown(t *testing.T) {
 	polTestEnv(t)
 	_, err := polRun(t, "replay")
-	if err == nil || !strings.Contains(err.Error(), "askgate start") {
+	if err == nil || !strings.Contains(err.Error(), "pilothouse start") {
 		t.Fatalf("err = %v", err)
 	}
 }

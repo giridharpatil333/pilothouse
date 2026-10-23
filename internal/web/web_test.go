@@ -25,11 +25,11 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/config"
-	"github.com/xasdta/askgate/internal/core"
-	"github.com/xasdta/askgate/internal/notify"
-	"github.com/xasdta/askgate/internal/web/webtest"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/config"
+	"github.com/xasdta/pilothouse/internal/core"
+	"github.com/xasdta/pilothouse/internal/notify"
+	"github.com/xasdta/pilothouse/internal/web/webtest"
 )
 
 var _ notify.Pusher = (*Server)(nil)
@@ -62,18 +62,18 @@ type env struct {
 	local *http.ServeMux
 }
 
-// isolate points every Askgate path at temp dirs (BUILD-SPEC invariant 1).
+// isolate points every Pilothouse path at temp dirs (BUILD-SPEC invariant 1).
 func isolate(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
-	t.Setenv("ASKGATE_HOME", home)
-	t.Setenv("ASKGATE_USER_HOME", t.TempDir())
+	t.Setenv("PILOTHOUSE_HOME", home)
+	t.Setenv("PILOTHOUSE_USER_HOME", t.TempDir())
 	run, err := os.MkdirTemp("/tmp", "ag")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(run) })
-	t.Setenv("ASKGATE_RUN_DIR", run)
+	t.Setenv("PILOTHOUSE_RUN_DIR", run)
 	return home
 }
 
@@ -134,7 +134,7 @@ func (e *env) do(method, path string, body any, o reqOpt) *httptest.ResponseReco
 	}
 	if method != "GET" {
 		if !o.noCSRF {
-			r.Header.Set("X-Askgate", "1")
+			r.Header.Set("X-Pilothouse", "1")
 		}
 		switch o.origin {
 		case "":
@@ -613,7 +613,7 @@ func TestVerifyWebCryptoFixture(t *testing.T) {
 	if VerifyP1363(pub, []byte(f.Canonical+"x"), sig) || VerifyP1363(pub, []byte(f.Canonical), sig[:63]) {
 		t.Fatal("tampered input accepted")
 	}
-	if CanonicalDecision("r", api.BehaviorDeny, "", 5, "n") != "askgate-decide:v1\nr\ndeny\nonce\n5\nn" {
+	if CanonicalDecision("r", api.BehaviorDeny, "", 5, "n") != "pilothouse-decide:v1\nr\ndeny\nonce\n5\nn" {
 		t.Fatal("empty scope must sign as once")
 	}
 }
@@ -1241,5 +1241,5 @@ func TestCodesAndNames(t *testing.T) {
 }
 
 func notifyRequest(r api.Request) core.Notification {
-	return core.Notification{Kind: core.NotifyRequest, Title: "Claude Code · askgate", Body: "Wants to run `git push origin main`", Request: &r, Remote: true}
+	return core.Notification{Kind: core.NotifyRequest, Title: "Claude Code · pilothouse", Body: "Wants to run `git push origin main`", Request: &r, Remote: true}
 }

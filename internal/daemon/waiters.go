@@ -3,7 +3,7 @@ package daemon
 import (
 	"sync"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // waiters connects permission hooks that are holding for a decision with

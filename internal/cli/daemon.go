@@ -17,10 +17,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/daemon"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/daemon"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
 const (
@@ -36,9 +36,9 @@ func newDaemonCmd() *cobra.Command {
 	var debug bool
 	cmd := &cobra.Command{
 		Use:   "daemon",
-		Short: "Run the Askgate daemon in the foreground",
-		Long: `Run the Askgate daemon in the foreground. Most people use ` + "`askgate start`" + `
-or the background service (` + "`askgate service install`" + `) instead.`,
+		Short: "Run the Pilothouse daemon in the foreground",
+		Long: `Run the Pilothouse daemon in the foreground. Most people use ` + "`pilothouse start`" + `
+or the background service (` + "`pilothouse service install`" + `) instead.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			var out io.Writer = os.Stderr
@@ -78,7 +78,7 @@ func newStartCmd() *cobra.Command {
 			ctx := cmdContext(cmd)
 			c := client.New()
 			if h, err := quickHealth(ctx, c); err == nil {
-				fmt.Fprintf(cmd.OutOrStdout(), "askgate daemon is already running (pid %d)\n", h.PID)
+				fmt.Fprintf(cmd.OutOrStdout(), "pilothouse daemon is already running (pid %d)\n", h.PID)
 				return nil
 			}
 			pid, err := spawnDaemon()
@@ -89,7 +89,7 @@ func newStartCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("the daemon (pid %d) did not come up within %s: see %s", pid, startTimeout, daemonLogPath())
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "askgate daemon started (pid %d)\n", h.PID)
+			fmt.Fprintf(cmd.OutOrStdout(), "pilothouse daemon started (pid %d)\n", h.PID)
 			if h.WebURL != "" {
 				fmt.Fprintf(cmd.OutOrStdout(), "web app: %s\n", h.WebURL)
 			}
@@ -103,14 +103,14 @@ func newStopCmd() *cobra.Command {
 		Use:   "stop",
 		Short: "Stop the background daemon",
 		Long: `Stop the daemon. Requests it is holding are handed back to the agents'
-own dialogs first. Agents started with ` + "`askgate run`" + ` keep running.`,
+own dialogs first. Agents started with ` + "`pilothouse run`" + ` keep running.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmdContext(cmd)
 			c := client.New()
 			err := c.Shutdown(ctx)
 			if errors.Is(err, client.ErrDaemonDown) {
-				fmt.Fprintln(cmd.OutOrStdout(), "askgate daemon is not running")
+				fmt.Fprintln(cmd.OutOrStdout(), "pilothouse daemon is not running")
 				return nil
 			}
 			if err != nil {
@@ -119,13 +119,13 @@ own dialogs first. Agents started with ` + "`askgate run`" + ` keep running.`,
 			if err := waitGone(ctx, c, stopTimeout); err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "askgate daemon stopped")
+			fmt.Fprintln(cmd.OutOrStdout(), "pilothouse daemon stopped")
 			return nil
 		},
 	}
 }
 
-// daemonStatus is `askgate status --json`.
+// daemonStatus is `pilothouse status --json`.
 type daemonStatus struct {
 	Running      bool          `json:"running"`
 	Health       *api.Health   `json:"health,omitempty"`
@@ -195,7 +195,7 @@ func collectStatus(ctx context.Context, c *client.Client) (daemonStatus, error) 
 
 func printStatus(w io.Writer, st daemonStatus) {
 	if !st.Running {
-		fmt.Fprintln(w, "daemon:   not running — start it with `askgate start`")
+		fmt.Fprintln(w, "daemon:   not running — start it with `pilothouse start`")
 		return
 	}
 	h := st.Health
@@ -205,7 +205,7 @@ func printStatus(w io.Writer, st daemonStatus) {
 	if p := st.Presence; p != nil {
 		mode := ""
 		if p.Mode != api.PresenceAuto {
-			mode = fmt.Sprintf(", forced with `askgate %s`", p.Mode)
+			mode = fmt.Sprintf(", forced with `pilothouse %s`", p.Mode)
 		}
 		fmt.Fprintf(w, "presence: %s (%s%s)\n", p.State, p.Source, mode)
 	}
@@ -217,7 +217,7 @@ func printStatus(w io.Writer, st daemonStatus) {
 	fmt.Fprintf(w, "socket:   %s\n", paths.Socket())
 }
 
-// spawnDaemon re-executes this binary as `askgate daemon` in its own
+// spawnDaemon re-executes this binary as `pilothouse daemon` in its own
 // session, detached from the terminal, so closing the terminal doesn't
 // stop it.
 func spawnDaemon() (int, error) {
@@ -226,7 +226,7 @@ func spawnDaemon() (int, error) {
 	}
 	exe, err := os.Executable()
 	if err != nil {
-		return 0, fmt.Errorf("find the askgate binary: %w", err)
+		return 0, fmt.Errorf("find the pilothouse binary: %w", err)
 	}
 	devnull, err := os.OpenFile(os.DevNull, os.O_RDWR, 0)
 	if err != nil {

@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/adapters"
-	"github.com/xasdta/askgate/internal/adapters/hookkit"
+	"github.com/xasdta/pilothouse/internal/adapters"
+	"github.com/xasdta/pilothouse/internal/adapters/hookkit"
 )
 
-// owned recognizes hook commands we installed (`… askgate hook claude`).
+// owned recognizes hook commands we installed (`… pilothouse hook claude`).
 var owned = hookkit.OwnedBy("claude")
 
-// wiredEvents are the Claude Code events Askgate listens to, with the
+// wiredEvents are the Claude Code events Pilothouse listens to, with the
 // matcher and timeout written for each. Tool events match every tool
 // ("*"); the others omit the matcher (all occurrences). Only PreToolUse
 // and PermissionRequest get explicit timeouts: the shim bounds every other
@@ -49,7 +49,7 @@ func specs(shimPath string) []hookkit.Spec {
 // refuses to touch a file that is not valid JSON.
 func (Adapter) InstallHooks(opts adapters.InstallOptions) (adapters.Change, error) {
 	if opts.ShimPath == "" {
-		return adapters.Change{}, fmt.Errorf("install: no askgate binary path")
+		return adapters.Change{}, fmt.Errorf("install: no pilothouse binary path")
 	}
 	plan, err := hookkit.PlanJSON(SettingsPath(), specs(opts.ShimPath), owned)
 	if err != nil {
@@ -68,9 +68,9 @@ func (Adapter) UninstallHooks(opts adapters.InstallOptions) (adapters.Change, er
 	if err != nil {
 		return adapters.Change{}, err
 	}
-	summary := "No Askgate hooks in " + SettingsPath()
+	summary := "No Pilothouse hooks in " + SettingsPath()
 	if plan.Result.Changed {
-		summary = fmt.Sprintf("Remove %d Askgate hook handlers from %s", len(plan.Result.Found), SettingsPath())
+		summary = fmt.Sprintf("Remove %d Pilothouse hook handlers from %s", len(plan.Result.Found), SettingsPath())
 	}
 	return commit(plan, summary, opts.DryRun)
 }
@@ -84,7 +84,7 @@ func commit(plan hookkit.Plan, summary string, dryRun bool) (adapters.Change, er
 }
 
 // Status reports which events are wired and whether they match what
-// InstallHooks would write for opts.ShimPath (any askgate path counts
+// InstallHooks would write for opts.ShimPath (any pilothouse path counts
 // when ShimPath is empty).
 func (Adapter) Status(opts adapters.InstallOptions) (adapters.HookStatus, error) {
 	st := adapters.HookStatus{Path: SettingsPath()}
@@ -103,7 +103,7 @@ func (Adapter) Status(opts adapters.InstallOptions) (adapters.HookStatus, error)
 	st.Installed = len(st.Events) > 0
 	st.Problems = hookkit.Problems(plan.Result.Found)
 	if hooksDisabled(plan.File.Data) {
-		st.Problems = append(st.Problems, `"disableAllHooks": true in settings.json turns every hook off, Askgate's included`)
+		st.Problems = append(st.Problems, `"disableAllHooks": true in settings.json turns every hook off, Pilothouse's included`)
 	}
 	var missing []string
 	for _, w := range wiredEvents {
@@ -112,7 +112,7 @@ func (Adapter) Status(opts adapters.InstallOptions) (adapters.HookStatus, error)
 		}
 	}
 	if st.Installed && len(missing) > 0 {
-		st.Problems = append(st.Problems, "not wired: "+strings.Join(missing, ", ")+"; run `askgate hooks install`")
+		st.Problems = append(st.Problems, "not wired: "+strings.Join(missing, ", ")+"; run `pilothouse hooks install`")
 	}
 	current := !plan.Result.Changed
 	if opts.ShimPath == "" {

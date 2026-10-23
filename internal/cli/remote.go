@@ -20,9 +20,9 @@ import (
 	"github.com/mdp/qrterminal/v3"
 	"github.com/spf13/cobra"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/client"
-	"github.com/xasdta/askgate/internal/config"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/client"
+	"github.com/xasdta/pilothouse/internal/config"
 )
 
 // rmtDaemon is the part of the daemon client these commands use.
@@ -68,7 +68,7 @@ func rmtErr(err error, what string) error {
 	return err
 }
 
-// ---- askgate pair ----
+// ---- pilothouse pair ----
 
 func newPairCmd() *cobra.Command {
 	var noQR, noWait, asJSON bool
@@ -80,7 +80,7 @@ Scan it with your phone's camera, name the device, and it can answer your
 agents' permission requests — every answer is signed with a key that never
 leaves the phone.
 
-To reach this computer from your phone, run ` + "`askgate remote tailscale`" + ` first.`,
+To reach this computer from your phone, run ` + "`pilothouse remote tailscale`" + ` first.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := rmtCtx(cmd)
@@ -98,7 +98,7 @@ To reach this computer from your phone, run ` + "`askgate remote tailscale`" + `
 			}
 			p, err := c.Pair(ctx)
 			if err != nil {
-				return rmtErr(err, "askgate pair")
+				return rmtErr(err, "pilothouse pair")
 			}
 			out := cmd.OutOrStdout()
 			if asJSON {
@@ -121,7 +121,7 @@ func rmtPrintPair(w io.Writer, p api.PairStart, qr bool) {
 	mins := int(p.ExpiresAt.Sub(rmtNow()).Round(time.Minute).Minutes())
 	if !p.Remote {
 		fmt.Fprintln(w, "! No remote URL is configured: this link only works in a browser on this computer.")
-		fmt.Fprintln(w, "  To pair a phone, first run `askgate remote tailscale` (or set web.public_url in config.yaml).")
+		fmt.Fprintln(w, "  To pair a phone, first run `pilothouse remote tailscale` (or set web.public_url in config.yaml).")
 		fmt.Fprintln(w)
 	}
 	if qr && p.Remote {
@@ -163,12 +163,12 @@ func rmtWaitForDevice(ctx context.Context, c rmtDaemon, w io.Writer, after int64
 	case paired != nil:
 		fmt.Fprintf(w, "✓ Paired %q (%s). Turn on notifications in its Settings tab.\n", paired.Name, paired.ID)
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
-		fmt.Fprintln(w, "The code expired. Run `askgate pair` again.")
+		fmt.Fprintln(w, "The code expired. Run `pilothouse pair` again.")
 	}
 	return nil
 }
 
-// ---- askgate devices ----
+// ---- pilothouse devices ----
 
 func newDevicesCmd() *cobra.Command {
 	var asJSON bool
@@ -179,14 +179,14 @@ func newDevicesCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ds, err := rmtClient().Devices(rmtCtx(cmd))
 			if err != nil {
-				return rmtErr(err, "askgate devices")
+				return rmtErr(err, "pilothouse devices")
 			}
 			out := cmd.OutOrStdout()
 			if asJSON {
 				return json.NewEncoder(out).Encode(ds)
 			}
 			if len(ds) == 0 {
-				fmt.Fprintln(out, "No paired devices. Pair your phone with `askgate pair`.")
+				fmt.Fprintln(out, "No paired devices. Pair your phone with `pilothouse pair`.")
 				return nil
 			}
 			tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
@@ -215,7 +215,7 @@ func newDevicesCmd() *cobra.Command {
 			c := rmtClient()
 			ds, err := c.Devices(ctx)
 			if err != nil {
-				return rmtErr(err, "askgate devices revoke")
+				return rmtErr(err, "pilothouse devices revoke")
 			}
 			var match []api.Device
 			for _, d := range ds {
@@ -229,13 +229,13 @@ func newDevicesCmd() *cobra.Command {
 			}
 			switch len(match) {
 			case 0:
-				return fmt.Errorf("no paired device %q (see `askgate devices`)", args[0])
+				return fmt.Errorf("no paired device %q (see `pilothouse devices`)", args[0])
 			case 1:
 			default:
 				return fmt.Errorf("%q matches %d devices; use more of the id", args[0], len(match))
 			}
 			if err := c.RevokeDevice(ctx, match[0].ID); err != nil {
-				return rmtErr(err, "askgate devices revoke")
+				return rmtErr(err, "pilothouse devices revoke")
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Revoked %q (%s).\n", match[0].Name, match[0].ID)
 			return nil
@@ -257,7 +257,7 @@ func rmtAgo(t time.Time) string {
 	return fmt.Sprintf("%dd ago", int(d.Hours()/24))
 }
 
-// ---- askgate open ----
+// ---- pilothouse open ----
 
 func newOpenCmd() *cobra.Command {
 	var printOnly bool
@@ -268,7 +268,7 @@ func newOpenCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			l, err := rmtClient().LoginLink(rmtCtx(cmd))
 			if err != nil {
-				return rmtErr(err, "askgate open")
+				return rmtErr(err, "pilothouse open")
 			}
 			out := cmd.OutOrStdout()
 			if printOnly {
@@ -279,7 +279,7 @@ func newOpenCmd() *cobra.Command {
 				fmt.Fprintf(out, "Couldn't open a browser (%v). Open this one-time link yourself:\n  %s\n", err, l.URL)
 				return nil
 			}
-			fmt.Fprintln(out, "Opened the Askgate web app in your browser.")
+			fmt.Fprintln(out, "Opened the Pilothouse web app in your browser.")
 			return nil
 		},
 	}
@@ -298,7 +298,7 @@ func rmtDefaultOpenBrowser(url string) error {
 	return exec.Command(name, url).Start()
 }
 
-// ---- askgate remote ----
+// ---- pilothouse remote ----
 
 // rmtTSExec runs the tailscale CLI.
 type rmtTSExec struct {
@@ -324,7 +324,7 @@ func (t rmtTSExec) binary() (string, error) {
 	if _, err := t.stat(rmtMacTailscale); err == nil {
 		return rmtMacTailscale, nil
 	}
-	return "", errors.New("tailscale is not installed — get it from https://tailscale.com/download, sign in, then run `askgate remote tailscale` again")
+	return "", errors.New("tailscale is not installed — get it from https://tailscale.com/download, sign in, then run `pilothouse remote tailscale` again")
 }
 
 // rmtTSStatus is the subset of `tailscale status --json` we read.
@@ -373,7 +373,7 @@ func newRemoteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remote",
 		Short: "Reach the web app from your phone (Tailscale Serve)",
-		Long: `The web app listens on 127.0.0.1 only. ` + "`askgate remote tailscale`" + ` publishes it to
+		Long: `The web app listens on 127.0.0.1 only. ` + "`pilothouse remote tailscale`" + ` publishes it to
 your tailnet over HTTPS with Tailscale Serve, so your phone (signed in to the
 same tailnet) can reach it. Nothing is exposed to the public internet.`,
 		Args: cobra.NoArgs,
@@ -417,11 +417,11 @@ func rmtTailscaleOn(ctx context.Context, w io.Writer) error {
 	host := strings.TrimSuffix(st.Self.DNSName, ".")
 	if host == "" || (st.CurrentTailnet != nil && !st.CurrentTailnet.MagicDNSEnabled) {
 		return errors.New("MagicDNS is off for your tailnet, so this machine has no HTTPS name.\n" +
-			"Turn it on at https://login.tailscale.com/admin/dns (MagicDNS → Enable), then run `askgate remote tailscale` again")
+			"Turn it on at https://login.tailscale.com/admin/dns (MagicDNS → Enable), then run `pilothouse remote tailscale` again")
 	}
 	if len(st.CertDomains) == 0 {
 		return errors.New("HTTPS certificates are off for your tailnet (phones need HTTPS for notifications and secure keys).\n" +
-			"Enable them at https://login.tailscale.com/admin/dns → HTTPS Certificates → Enable HTTPS, then run `askgate remote tailscale` again")
+			"Enable them at https://login.tailscale.com/admin/dns → HTTPS Certificates → Enable HTTPS, then run `pilothouse remote tailscale` again")
 	}
 	port := rmtWebPort(cfg)
 	fmt.Fprintf(w, "Starting Tailscale Serve: https://%s → http://127.0.0.1:%s\n", host, port)
@@ -434,7 +434,7 @@ func rmtTailscaleOn(ctx context.Context, w io.Writer) error {
 	}
 	fmt.Fprintf(w, "\n✓ The web app is on your tailnet at %s\n", cfg.Web.PublicURL)
 	fmt.Fprintln(w, "  Only devices signed in to your tailnet can reach it. The first visit may take a few seconds while the certificate is issued.")
-	fmt.Fprintln(w, "\nNext: run `askgate pair` and scan the QR code with your phone.")
+	fmt.Fprintln(w, "\nNext: run `pilothouse pair` and scan the QR code with your phone.")
 	return nil
 }
 
@@ -454,7 +454,7 @@ func rmtTailscaleOff(ctx context.Context, w io.Writer) error {
 		return err
 	}
 	if had != "" {
-		fmt.Fprintf(w, "✓ Stopped serving %s. Paired phones can't reach this computer until you run `askgate remote tailscale` again.\n", had)
+		fmt.Fprintf(w, "✓ Stopped serving %s. Paired phones can't reach this computer until you run `pilothouse remote tailscale` again.\n", had)
 	} else {
 		fmt.Fprintln(w, "✓ Remote access is off.")
 	}
@@ -468,7 +468,7 @@ func rmtStatus(ctx context.Context, w io.Writer) error {
 	}
 	fmt.Fprintf(w, "Local:   http://%s\n", cfg.Web.Addr)
 	if cfg.Web.PublicURL == "" {
-		fmt.Fprintln(w, "Remote:  off — run `askgate remote tailscale` to reach the web app from your phone")
+		fmt.Fprintln(w, "Remote:  off — run `pilothouse remote tailscale` to reach the web app from your phone")
 	} else {
 		fmt.Fprintf(w, "Remote:  %s\n", cfg.Web.PublicURL)
 	}
@@ -484,7 +484,7 @@ func rmtStatus(ctx context.Context, w io.Writer) error {
 	}
 	fmt.Fprintf(w, "\nTailscale Serve:\n%s", out)
 	if s := string(out); cfg.Web.PublicURL != "" && !strings.Contains(s, "127.0.0.1:"+rmtWebPort(cfg)) {
-		fmt.Fprintln(w, "\n! Tailscale Serve isn't proxying to Askgate — run `askgate remote tailscale` again.")
+		fmt.Fprintln(w, "\n! Tailscale Serve isn't proxying to Pilothouse — run `pilothouse remote tailscale` again.")
 	}
 	return nil
 }

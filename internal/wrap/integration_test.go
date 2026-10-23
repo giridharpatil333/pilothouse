@@ -15,11 +15,11 @@ import (
 
 	"github.com/creack/pty"
 
-	"github.com/xasdta/askgate/internal/api"
-	"github.com/xasdta/askgate/internal/paths"
+	"github.com/xasdta/pilothouse/internal/api"
+	"github.com/xasdta/pilothouse/internal/paths"
 )
 
-// These tests drive the real askgate binary: `run -d` spawns a detached
+// These tests drive the real pilothouse binary: `run -d` spawns a detached
 // holder process, and `run`/`attach` run inside a PTY like a user's
 // terminal.
 
@@ -29,10 +29,10 @@ func runDetached(t *testing.T, bin string, args ...string) string {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
-		t.Fatalf("askgate run -d: %v\n%s", err, stderr.String())
+		t.Fatalf("pilothouse run -d: %v\n%s", err, stderr.String())
 	}
 	sid := strings.TrimSpace(stdout.String())
-	if !strings.HasPrefix(sid, "s_") || !strings.Contains(stderr.String(), "askgate attach "+sid) {
+	if !strings.HasPrefix(sid, "s_") || !strings.Contains(stderr.String(), "pilothouse attach "+sid) {
 		t.Fatalf("run -d printed %q / %q", sid, stderr.String())
 	}
 	return sid
@@ -40,7 +40,7 @@ func runDetached(t *testing.T, bin string, args ...string) string {
 
 func TestBinaryDetachedHolderNoDaemon(t *testing.T) {
 	testEnv(t)
-	bin := askgateBin(t)
+	bin := pilothouseBin(t)
 	sid := runDetached(t, bin, "-n", "fake", "--", "/bin/sh", "-c", fakeAgent)
 	sock := paths.HolderSocket(sid)
 
@@ -86,7 +86,7 @@ func TestBinaryDetachedHolderNoDaemon(t *testing.T) {
 
 func TestBinaryHolderReportsToDaemon(t *testing.T) {
 	testEnv(t)
-	bin := askgateBin(t)
+	bin := pilothouseBin(t)
 	fd := startFakeDaemon(t)
 	sid := runDetached(t, bin, "--task", "t_test", "--", "/bin/sh", "-c", fakeAgent)
 	info, err := Probe(context.Background(), paths.HolderSocket(sid))
@@ -126,7 +126,7 @@ func TestBinaryHolderReportsToDaemon(t *testing.T) {
 	}
 }
 
-// ptyProc runs the askgate CLI inside a PTY, like a user's terminal.
+// ptyProc runs the pilothouse CLI inside a PTY, like a user's terminal.
 type ptyProc struct {
 	t    *testing.T
 	cmd  *exec.Cmd
@@ -220,16 +220,16 @@ func (p *ptyProc) exitCode() int {
 	return 0
 }
 
-// `askgate run` in a terminal: output, input and the agent's exit code.
+// `pilothouse run` in a terminal: output, input and the agent's exit code.
 func TestBinaryRunInTerminal(t *testing.T) {
 	testEnv(t)
-	bin := askgateBin(t)
+	bin := pilothouseBin(t)
 	p := startInPTY(t, bin, "run", "--", "/bin/sh", "-c", fakeAgent)
 	p.waitOutput("ready")
 	p.write("ping\r")
 	p.waitOutput("got:ping")
 	if code := p.exitCode(); code != 3 {
-		t.Fatalf("askgate run exited %d, want the agent's 3; output %q", code, p.output())
+		t.Fatalf("pilothouse run exited %d, want the agent's 3; output %q", code, p.output())
 	}
 
 	// An agent that is done before the terminal attaches: its output is
@@ -237,14 +237,14 @@ func TestBinaryRunInTerminal(t *testing.T) {
 	q := startInPTY(t, bin, "run", "--", "/bin/sh", "-c", "echo quick; exit 4")
 	q.waitOutput("quick")
 	if code := q.exitCode(); code != 4 {
-		t.Fatalf("askgate run exited %d, want 4; output %q", code, q.output())
+		t.Fatalf("pilothouse run exited %d, want 4; output %q", code, q.output())
 	}
 }
 
-// `askgate attach`: detach key, literal ctrl+\, reattach by prefix.
+// `pilothouse attach`: detach key, literal ctrl+\, reattach by prefix.
 func TestBinaryAttachDetachKey(t *testing.T) {
 	testEnv(t)
-	bin := askgateBin(t)
+	bin := pilothouseBin(t)
 	// The agent reads its terminal raw, so a forwarded ctrl+\ arrives as
 	// a byte (0x1c) instead of SIGQUIT, and prints it in hex.
 	script := `stty raw -echo; echo up; ` +
@@ -256,7 +256,7 @@ func TestBinaryAttachDetachKey(t *testing.T) {
 	a := startInPTY(t, bin, "attach", "--replay", sid[2:7])
 	a.waitOutput("up")
 	a.write("\x1c")
-	a.waitOutput("detached from keys (" + sid + ") — reattach: askgate attach " + sid)
+	a.waitOutput("detached from keys (" + sid + ") — reattach: pilothouse attach " + sid)
 	if code := a.exitCode(); code != 0 {
 		t.Fatalf("attach exited %d after detach", code)
 	}
@@ -281,7 +281,7 @@ func TestBinaryAttachDetachKey(t *testing.T) {
 // A second attach takes over from the first, which says why.
 func TestBinaryAttachTakeover(t *testing.T) {
 	testEnv(t)
-	bin := askgateBin(t)
+	bin := pilothouseBin(t)
 	sid := runDetached(t, bin, "-n", "shared", "--", "/bin/sh", "-c", `echo up; read l; exit 5`)
 	a := startInPTY(t, bin, "attach", "--replay", sid)
 	a.waitOutput("up")
@@ -299,7 +299,7 @@ func TestBinaryAttachTakeover(t *testing.T) {
 
 func TestBinaryAttachErrors(t *testing.T) {
 	testEnv(t)
-	bin := askgateBin(t)
+	bin := pilothouseBin(t)
 	out, err := exec.Command(bin, "attach", "s_nothere").CombinedOutput()
 	if err == nil || !strings.Contains(string(out), "no running session matches") {
 		t.Fatalf("attach to nothing: %v %s", err, out)

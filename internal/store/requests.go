@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xasdta/askgate/internal/api"
+	"github.com/xasdta/pilothouse/internal/api"
 )
 
 // PendingStatuses are the statuses a request can still be answered from

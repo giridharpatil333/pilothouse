@@ -1,4 +1,4 @@
-module github.com/xasdta/askgate
+module github.com/xasdta/pilothouse
 
 go 1.27.3
 

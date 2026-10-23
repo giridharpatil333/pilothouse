@@ -1,4 +1,4 @@
-// Package cli wires every askgate subcommand. Each workstream owns its own
+// Package cli wires every pilothouse subcommand. Each workstream owns its own
 // file (see docs/WORKSTREAMS.md); this file only assembles them.
 package cli
 
@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/xasdta/askgate/internal/version"
+	"github.com/xasdta/pilothouse/internal/version"
 )
 
 // ExitError carries a specific exit code out of a command.
@@ -19,9 +19,9 @@ func (e ExitError) Error() string { return fmt.Sprintf("exit %d", e.Code) }
 
 func newRoot() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "askgate",
+		Use:   "pilothouse",
 		Short: "One inbox for every coding agent",
-		Long: `Askgate watches Claude Code and Codex sessions on this machine, applies your
+		Long: `Pilothouse watches Claude Code and Codex sessions on this machine, applies your
 rules to every tool call, and sends what needs a person to wherever you are:
 the terminal at your desk, or your phone when you're away.`,
 		Version:       version.Version,
@@ -30,7 +30,7 @@ the terminal at your desk, or your phone when you're away.`,
 		Args:          cobra.NoArgs,
 		RunE:          runDefault, // inbox.go
 	}
-	root.SetVersionTemplate("askgate {{.Version}}\n")
+	root.SetVersionTemplate("pilothouse {{.Version}}\n")
 	root.AddGroup(
 		&cobra.Group{ID: "start", Title: "Getting started:"},
 		&cobra.Group{ID: "work", Title: "Everyday:"},
@@ -76,7 +76,7 @@ func Main(args []string) int {
 	if errors.As(err, &ee) {
 		return ee.Code
 	}
-	fmt.Fprintln(os.Stderr, "askgate:", err)
+	fmt.Fprintln(os.Stderr, "pilothouse:", err)
 	return 1
 }
 
