@@ -21,6 +21,8 @@ curl -fsSL https://pilothouse.dev/install.sh | sh     # or: brew install xasdta/
 pilothouse setup
 ```
 
+<p align="center"><img src="docs/assets/demo.gif" width="900" alt="Pilothouse demo: a rule blocks a force-push, then the inbox holds a git push to main while you're away and you approve it with y"></p>
+
 ## Why
 
 You start three agents, walk away, and come back to find two of them stuck on
