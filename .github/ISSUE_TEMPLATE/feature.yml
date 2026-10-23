@@ -1,0 +1,14 @@
+name: Feature request
+description: An idea or a missing agent
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve for you?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like Pilothouse to do?

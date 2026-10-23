@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/xasdta/pilothouse/security/advisories/new
+    about: Please report security issues privately.
+  - name: Question or idea
+    url: https://github.com/xasdta/pilothouse/discussions
+    about: Ask and discuss in GitHub Discussions.
