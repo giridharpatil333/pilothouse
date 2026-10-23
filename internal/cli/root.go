@@ -1,0 +1,85 @@
+// Package cli wires every askgate subcommand. Each workstream owns its own
+// file (see docs/WORKSTREAMS.md); this file only assembles them.
+package cli
+
+import (
+	"errors"
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+
+	"github.com/xasdta/askgate/internal/version"
+)
+
+// ExitError carries a specific exit code out of a command.
+type ExitError struct{ Code int }
+
+func (e ExitError) Error() string { return fmt.Sprintf("exit %d", e.Code) }
+
+func newRoot() *cobra.Command {
+	root := &cobra.Command{
+		Use:   "askgate",
+		Short: "One inbox for every coding agent",
+		Long: `Askgate watches Claude Code and Codex sessions on this machine, applies your
+rules to every tool call, and sends what needs a person to wherever you are:
+the terminal at your desk, or your phone when you're away.`,
+		Version:       version.Version,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Args:          cobra.NoArgs,
+		RunE:          runDefault, // inbox.go
+	}
+	root.SetVersionTemplate("askgate {{.Version}}\n")
+	root.AddGroup(
+		&cobra.Group{ID: "start", Title: "Getting started:"},
+		&cobra.Group{ID: "work", Title: "Everyday:"},
+		&cobra.Group{ID: "run", Title: "Running agents:"},
+		&cobra.Group{ID: "remote", Title: "Phone and remote:"},
+		&cobra.Group{ID: "admin", Title: "Daemon and setup:"},
+	)
+	add := func(group string, cmds ...*cobra.Command) {
+		for _, c := range cmds {
+			if c.GroupID == "" && !c.Hidden {
+				c.GroupID = group
+			}
+			root.AddCommand(c)
+		}
+	}
+	// inbox.go (workstream F)
+	add("start", newSetupCmd(), newDoctorCmd())
+	add("work", newInboxCmd(), newLsCmd(), newApproveCmd(), newDenyCmd(), newLogCmd(), newExplainCmd())
+	add("work", newPresenceCmds()...)
+	add("admin", newServiceCmd(), newNotifyCmd(), newVersionCmd())
+	// daemon.go (workstream A)
+	add("admin", newDaemonCmd(), newStartCmd(), newStopCmd(), newStatusCmd())
+	// hooks.go (workstream B)
+	add("admin", newHooksCmd(), newHookShimCmd())
+	// policy.go (workstream C)
+	add("work", newPolicyCmd())
+	// run.go (workstream D)
+	add("run", newRunCmd(), newAttachCmd(), newHolderCmd(), newTaskCmd())
+	// remote.go (workstream E)
+	add("remote", newPairCmd(), newDevicesCmd(), newRemoteCmd(), newOpenCmd())
+	return root
+}
+
+// Main runs the CLI and returns the process exit code.
+func Main(args []string) int {
+	root := newRoot()
+	root.SetArgs(args)
+	err := root.Execute()
+	if err == nil {
+		return 0
+	}
+	var ee ExitError
+	if errors.As(err, &ee) {
+		return ee.Code
+	}
+	fmt.Fprintln(os.Stderr, "askgate:", err)
+	return 1
+}
+
+func notYet(name string) func(*cobra.Command, []string) error {
+	return func(*cobra.Command, []string) error { return fmt.Errorf("%s: not implemented yet", name) }
+}

@@ -1,0 +1,24 @@
+// Package all lists every built-in adapter.
+package all
+
+import (
+	"github.com/xasdta/askgate/internal/adapters"
+	"github.com/xasdta/askgate/internal/adapters/claude"
+	"github.com/xasdta/askgate/internal/adapters/codex"
+	"github.com/xasdta/askgate/internal/api"
+)
+
+// List returns every adapter, in display order.
+func List() []adapters.Adapter {
+	return []adapters.Adapter{claude.New(), codex.New()}
+}
+
+// Get returns the adapter for kind, or nil.
+func Get(kind api.AgentKind) adapters.Adapter {
+	for _, a := range List() {
+		if a.Kind() == kind {
+			return a
+		}
+	}
+	return nil
+}
