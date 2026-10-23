@@ -136,7 +136,9 @@ pilothouse task done t_8d1x --pr          # push and open a PR with gh
   - A built-in rule forces a person to confirm any agent command that runs
     `pilothouse approve` or edits hook settings.
   - This is defense in depth, not a sandbox: policy sees what the agent's hook
-    sees.
+    sees. A process that double-forks away from the agent escapes the ancestry
+    check, and an obfuscated command can escape the rule. For hard isolation, run
+    agents as another user or in a container.
 - Fail-open by default: if the daemon is down, agents behave as if Pilothouse
   weren't installed. Set `approvals.fail_closed: true` to deny instead.
 - Telemetry: none. The only network call is a daily anonymous update check,
